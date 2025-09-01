@@ -29,6 +29,8 @@ export class SupabaseAuthGuard implements CanActivate {
       const decoded = jwt.verify(token, SUPABASE_JWT_SECRET);
       request.supabaseUser = decoded;
       request.supabaseToken = token;
+      return true;
+    } catch (err) {
       if (err instanceof jwt.TokenExpiredError) {
         throw new UnauthorizedException('Token expired');
       } else if (err instanceof jwt.JsonWebTokenError) {
@@ -39,7 +41,5 @@ export class SupabaseAuthGuard implements CanActivate {
         throw new UnauthorizedException('JWT authentication error');
       }
     }
-
-    return true;
   }
 }
