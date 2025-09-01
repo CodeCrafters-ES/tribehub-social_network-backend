@@ -17,11 +17,12 @@ export class SupabaseAuthGuard implements CanActivate {
 
     const token = authHeader.replace('Bearer ', '');
 
+    if (!token) {
+      throw new UnauthorizedException('Missing token');
+    }
+
     // Validate Supabase JWT
     try {
-      if (!token) {
-        throw new UnauthorizedException('Missing token');
-      }
       if (!SUPABASE_JWT_SECRET) {
         throw new UnauthorizedException('JWT secret not configured');
       }
