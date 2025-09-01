@@ -121,3 +121,38 @@ const token = data.session.access_token;
 
 ```
 Frontend -> /auth/register -> Confirmar Email -> /auth/login -> Obtener Token -> Usar Token en rutas protegidas
+
+```
+
+---
+
+## Pruebas y comandos
+
+Para ejecutar los tests del módulo de autenticación:
+
+- Ejecutar todos los tests:
+  ```bash
+  npm run test
+  ```
+
+- Ejecutar en modo watch:
+  ```bash
+  npm run test:watch
+  ```
+
+- Ejecutar con cobertura:
+  ```bash
+  npm run test:cov
+  ```
+
+- Ejecutar solo los tests de auth:
+  ```bash
+  npm run test -- auth
+  ```
+
+- Ejecutar tests e2e:
+  ```bash
+  npm run test:e2e
+  ```
+
+Los resultados aparecerán en la terminal indicando si las pruebas pasaron o fallaron.
