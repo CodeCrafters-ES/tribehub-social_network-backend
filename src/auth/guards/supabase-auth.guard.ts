@@ -3,7 +3,7 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
 
-const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET || '';
+const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
 
 @Injectable()
 export class SupabaseAuthGuard implements CanActivate {
