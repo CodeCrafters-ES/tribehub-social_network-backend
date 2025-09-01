@@ -1,6 +1,9 @@
 // src/auth/guards/supabase-auth.guard.ts
 
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import * as jwt from 'jsonwebtoken';
+
+const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET || '';
 
 @Injectable()
 export class SupabaseAuthGuard implements CanActivate {
@@ -14,14 +17,20 @@ export class SupabaseAuthGuard implements CanActivate {
 
     const token = authHeader.replace('Bearer ', '');
 
-    // TODO: Validate Supabase JWT (call Supabase API or decode locally)
-    // For now, just check token exists
-    if (!token) {
-      throw new UnauthorizedException('Missing token');
+    // Validate Supabase JWT
+    try {
+      if (!token) {
+        throw new UnauthorizedException('Missing token');
+      }
+      if (!SUPABASE_JWT_SECRET) {
+        throw new UnauthorizedException('JWT secret not configured');
+      }
+      const decoded = jwt.verify(token, SUPABASE_JWT_SECRET);
+      request.supabaseUser = decoded;
+      request.supabaseToken = token;
+    } catch (err) {
+      throw new UnauthorizedException('Invalid or expired token');
     }
-
-    // Attach token to request for further use
-    request.supabaseToken = token;
 
     return true;
   }
