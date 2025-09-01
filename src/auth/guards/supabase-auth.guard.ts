@@ -29,8 +29,15 @@ export class SupabaseAuthGuard implements CanActivate {
       const decoded = jwt.verify(token, SUPABASE_JWT_SECRET);
       request.supabaseUser = decoded;
       request.supabaseToken = token;
-    } catch (err) {
-      throw new UnauthorizedException('Invalid or expired token');
+      if (err instanceof jwt.TokenExpiredError) {
+        throw new UnauthorizedException('Token expired');
+      } else if (err instanceof jwt.JsonWebTokenError) {
+        throw new UnauthorizedException('Malformed token or invalid signature');
+      } else if (err instanceof jwt.NotBeforeError) {
+        throw new UnauthorizedException('Token not active');
+      } else {
+        throw new UnauthorizedException('JWT authentication error');
+      }
     }
 
     return true;
