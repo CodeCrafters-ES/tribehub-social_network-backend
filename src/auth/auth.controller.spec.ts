@@ -41,10 +41,7 @@ describe('AuthController', () => {
     const dto: RegisterDto = { email: 'fail@example.com', username: 'failuser', password: 'password123' };
     (service.register as jest.Mock).mockRejectedValue(new Error('Register failed'));
 
-    const result = await controller.register(dto);
-    expect(result.success).toBe(false);
-    expect(result.error).toBeDefined();
-    expect(result.error?.code).toBe('REGISTER_ERROR');
+    await expect(controller.register(dto)).rejects.toThrowError('Register failed');
   });
 
   it('should login a user', async () => {
@@ -60,9 +57,6 @@ describe('AuthController', () => {
     const dto: LoginDto = { email: 'fail@example.com', password: 'password123' };
     (service.login as jest.Mock).mockRejectedValue(new Error('Login failed'));
 
-    const result = await controller.login(dto);
-    expect(result.success).toBe(false);
-    expect(result.error).toBeDefined();
-    expect(result.error?.code).toBe('LOGIN_ERROR');
+    await expect(controller.login(dto)).rejects.toThrowError('Login failed');
   });
 });
