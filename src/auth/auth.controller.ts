@@ -29,9 +29,20 @@ export class AuthController {
 
   @Post('login')
   async login(@Body() dto: LoginDto) {
-    // Log only non-sensitive fields from the DTO (e.g., email)
-    const { email } = dto;
-    console.log('Login request:', { email });
+    // Enhanced logging for debugging
+    console.log('🔐 === LOGIN REQUEST DEBUG ===');
+    console.log('🔐 Raw DTO received:', JSON.stringify(dto, null, 2));
+    console.log('🔐 DTO properties:', Object.keys(dto));
+    console.log('🔐 DTO values:', Object.values(dto));
+
+    const { email, password } = dto;
+    console.log('🔐 Parsed data:', {
+      email,
+      password: password ? '***PROVIDED***' : 'MISSING',
+      passwordType: typeof password,
+      emailType: typeof email
+    });
+
     try {
       const result = await this.authService.login(dto);
       return {
@@ -40,6 +51,7 @@ export class AuthController {
         message: 'Login successful'
       };
     } catch (error) {
+      console.log('🔐 Login error:', error.message);
       throw new BadRequestException({
         code: 'LOGIN_ERROR',
         message: error.message
