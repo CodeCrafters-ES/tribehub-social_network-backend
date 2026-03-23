@@ -19,6 +19,7 @@ async function bootstrap() {
         value: error.value
       })));
       const messages = errors.map(error => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const constraints: string[] = error.constraints ? Object.values(error.constraints) as string[] : [];
         return {
           field: error.property,

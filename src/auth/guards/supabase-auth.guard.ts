@@ -2,13 +2,7 @@
 
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Request } from 'express';
-import {
-  verify,
-  TokenExpiredError,
-  JsonWebTokenError,
-  NotBeforeError,
-  type JwtPayload,
-} from 'jsonwebtoken';
+import { verify, type JwtPayload } from 'jsonwebtoken';
 
 const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
 
@@ -44,12 +38,13 @@ export class SupabaseAuthGuard implements CanActivate {
       request.supabaseToken = token;
       return true;
     } catch (err) {
-      if (err instanceof TokenExpiredError) {
+      const name = err instanceof Error ? err.name : '';
+      if (name === 'TokenExpiredError') {
         throw new UnauthorizedException('Token expired');
-      } else if (err instanceof JsonWebTokenError) {
-        throw new UnauthorizedException('Malformed token or invalid signature');
-      } else if (err instanceof NotBeforeError) {
+      } else if (name === 'NotBeforeError') {
         throw new UnauthorizedException('Token not active');
+      } else if (name === 'JsonWebTokenError') {
+        throw new UnauthorizedException('Malformed token or invalid signature');
       } else {
         throw new UnauthorizedException('JWT authentication error');
       }
