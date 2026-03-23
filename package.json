@@ -63,6 +63,9 @@
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0"
   },
+  "pnpm": {
+    "ignoredBuiltDependencies": ["@nestjs/core", "@swc/core"]
+  },
   "jest": {
     "moduleFileExtensions": [
       "js",
