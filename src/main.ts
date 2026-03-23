@@ -19,7 +19,7 @@ async function bootstrap() {
         value: error.value
       })));
       const messages = errors.map(error => {
-        const constraints = error.constraints ? Object.values(error.constraints) : [];
+        const constraints: string[] = error.constraints ? Object.values(error.constraints) as string[] : [];
         return {
           field: error.property,
           errors: constraints
