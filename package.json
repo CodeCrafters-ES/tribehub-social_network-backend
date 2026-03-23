@@ -5,7 +5,12 @@
   "author": "",
   "private": true,
   "license": "UNLICENSED",
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
+    "preinstall": "npx only-allow pnpm",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
