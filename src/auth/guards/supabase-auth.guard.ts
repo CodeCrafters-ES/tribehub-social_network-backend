@@ -33,7 +33,9 @@ export class SupabaseAuthGuard implements CanActivate {
 
     // Validate Supabase JWT
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
       const decoded = verify(token, SUPABASE_JWT_SECRET) as JwtPayload;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       request.supabaseUser = decoded;
       request.supabaseToken = token;
       return true;
