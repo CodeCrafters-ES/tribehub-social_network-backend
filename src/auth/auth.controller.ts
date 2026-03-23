@@ -20,9 +20,10 @@ export class AuthController {
         message: 'User registered successfully'
       };
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
       throw new BadRequestException({
         code: 'REGISTER_ERROR',
-        message: error.message
+        message,
       });
     }
   }
@@ -51,10 +52,11 @@ export class AuthController {
         message: 'Login successful'
       };
     } catch (error) {
-      console.log('🔐 Login error:', error.message);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.log('🔐 Login error:', message);
       throw new BadRequestException({
         code: 'LOGIN_ERROR',
-        message: error.message
+        message,
       });
     }
   }

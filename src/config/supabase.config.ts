@@ -1,8 +1,8 @@
 // src/config/supabase.config.ts
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
-export function getSupabaseClient(): SupabaseClient {
+export function getSupabaseClient(): ReturnType<typeof createClient> {
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
   if (!SUPABASE_URL) {

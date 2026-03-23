@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { ValidationError } from 'class-validator';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -11,7 +12,7 @@ async function bootstrap() {
     forbidNonWhitelisted: false,       // ❌ TEMPORAL: No rechazar propiedades extras
     transform: true,                   // Transformar payloads a DTOs
     stopAtFirstError: false,           // ❌ TEMPORAL: Mostrar todos los errores
-    exceptionFactory: (errors) => {
+    exceptionFactory: (errors: ValidationError[]) => {
       console.log('🚨 ValidationPipe Errors:', errors.map(error => ({
         property: error.property,
         constraints: error.constraints,
@@ -80,4 +81,4 @@ async function bootstrap() {
   console.log(`🌍 CORS enabled for environment: ${nodeEnv}`);
   console.log(`📝 Allowed origins: ${origins.join(', ')}`);
 }
-bootstrap();
+void bootstrap();

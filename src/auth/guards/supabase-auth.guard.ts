@@ -1,14 +1,20 @@
 // src/auth/guards/supabase-auth.guard.ts
 
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Request } from 'express';
 import * as jwt from 'jsonwebtoken';
 
 const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
 
+type AuthenticatedRequest = Request & {
+  supabaseUser: jwt.JwtPayload;
+  supabaseToken: string;
+};
+
 @Injectable()
 export class SupabaseAuthGuard implements CanActivate {
-  async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const authHeader = request.headers['authorization'];
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -21,12 +27,13 @@ export class SupabaseAuthGuard implements CanActivate {
       throw new UnauthorizedException('Missing token');
     }
 
+    if (!SUPABASE_JWT_SECRET) {
+      throw new UnauthorizedException('JWT secret not configured');
+    }
+
     // Validate Supabase JWT
     try {
-      if (!SUPABASE_JWT_SECRET) {
-        throw new UnauthorizedException('JWT secret not configured');
-      }
-      const decoded = jwt.verify(token, SUPABASE_JWT_SECRET);
+      const decoded = jwt.verify(token, SUPABASE_JWT_SECRET) as jwt.JwtPayload;
       request.supabaseUser = decoded;
       request.supabaseToken = token;
       return true;
