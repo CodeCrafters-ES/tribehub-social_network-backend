@@ -5,12 +5,12 @@
   "author": "",
   "private": true,
   "license": "UNLICENSED",
-  "packageManager": "pnpm@9.0.0",
+  "packageManager": "pnpm@9.15.9+sha512.68046141893c66fad01c079231128e9afb89ef87e2691d69e4d40eee228988295fd4682181bae55b58418c3a253bde65a505ec7c5f9403ece5cc3cd37dcf2531",
   "engines": {
     "node": ">=20.0.0"
   },
   "scripts": {
-    "preinstall": "npx only-allow pnpm",
+    "preinstall": "node -e \"const a=process.env.npm_config_user_agent;if(a&&!a.startsWith('pnpm')){console.error('\\nUse pnpm to install dependencies: https://pnpm.io\\n');process.exit(1)}\"",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
@@ -64,7 +64,7 @@
     "typescript-eslint": "^8.20.0"
   },
   "pnpm": {
-    "ignoredBuiltDependencies": ["@nestjs/core", "@swc/core"]
+    "onlyBuiltDependencies": []
   },
   "jest": {
     "moduleFileExtensions": [
