@@ -11,13 +11,16 @@ export class AuthController {
 
   @Post('register')
   async register(@Body() dto: RegisterDto) {
-    console.log('Register request:', { email: dto.email, username: dto.username });
+    console.log('Register request:', {
+      email: dto.email,
+      username: dto.username,
+    });
     try {
       const result = await this.authService.register(dto);
       return {
         success: true,
         data: result,
-        message: 'User registered successfully'
+        message: 'User registered successfully',
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -41,7 +44,7 @@ export class AuthController {
       email,
       password: password ? '***PROVIDED***' : 'MISSING',
       passwordType: typeof password,
-      emailType: typeof email
+      emailType: typeof email,
     });
 
     try {
@@ -49,7 +52,7 @@ export class AuthController {
       return {
         success: true,
         data: result,
-        message: 'Login successful'
+        message: 'Login successful',
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';

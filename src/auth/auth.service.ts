@@ -15,8 +15,8 @@ export class AuthService {
       email,
       password,
       options: {
-        data: { username }
-      }
+        data: { username },
+      },
     });
     if (error) {
       throw new Error(error.message);
@@ -29,7 +29,7 @@ export class AuthService {
     const { email, password } = data;
     const { data: signInData, error } = await supabase.auth.signInWithPassword({
       email,
-      password
+      password,
     });
     if (error) {
       throw new Error(error.message);
