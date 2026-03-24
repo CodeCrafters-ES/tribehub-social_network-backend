@@ -1,5 +1,6 @@
 // src/auth/auth.controller.spec.ts
 
+import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -17,8 +18,8 @@ describe('AuthController', () => {
         {
           provide: AuthService,
           useValue: {
-            register: jest.fn(),
-            login: jest.fn(),
+            register: vi.fn(),
+            login: vi.fn(),
           },
         },
       ],
@@ -29,8 +30,12 @@ describe('AuthController', () => {
   });
 
   it('should register a user', async () => {
-    const dto: RegisterDto = { email: 'test@gmail.com', username: 'testuser', password: 'password123' };
-    (service.register as jest.Mock).mockResolvedValue({ id: 'user-id' });
+    const dto: RegisterDto = {
+      email: 'test@gmail.com',
+      username: 'testuser',
+      password: 'password123',
+    };
+    (service.register as vi.Mock).mockResolvedValue({ id: 'user-id' });
 
     const result = await controller.register(dto);
     expect(result.success).toBe(true);
@@ -38,15 +43,23 @@ describe('AuthController', () => {
   });
 
   it('should handle register error', async () => {
-    const dto: RegisterDto = { email: 'fail@example.com', username: 'failuser', password: 'password123' };
-    (service.register as jest.Mock).mockRejectedValue(new Error('Register failed'));
+    const dto: RegisterDto = {
+      email: 'fail@example.com',
+      username: 'failuser',
+      password: 'password123',
+    };
+    (service.register as vi.Mock).mockRejectedValue(
+      new Error('Register failed'),
+    );
 
-    await expect(controller.register(dto)).rejects.toThrowError('Register failed');
+    await expect(controller.register(dto)).rejects.toThrowError(
+      'Register failed',
+    );
   });
 
   it('should login a user', async () => {
     const dto: LoginDto = { email: 'test@gmail.com', password: 'password123' };
-    (service.login as jest.Mock).mockResolvedValue({ session: 'session-token' });
+    (service.login as vi.Mock).mockResolvedValue({ session: 'session-token' });
 
     const result = await controller.login(dto);
     expect(result.success).toBe(true);
@@ -54,8 +67,11 @@ describe('AuthController', () => {
   });
 
   it('should handle login error', async () => {
-    const dto: LoginDto = { email: 'fail@example.com', password: 'password123' };
-    (service.login as jest.Mock).mockRejectedValue(new Error('Login failed'));
+    const dto: LoginDto = {
+      email: 'fail@example.com',
+      password: 'password123',
+    };
+    (service.login as vi.Mock).mockRejectedValue(new Error('Login failed'));
 
     await expect(controller.login(dto)).rejects.toThrowError('Login failed');
   });

@@ -6,63 +6,54 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // ✅ VALIDATION PIPE GLOBAL - MÁS PERMISSIVO PARA DEBUGGING
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: false,                   // ❌ TEMPORAL: Permitir propiedades extras para debugging
-    forbidNonWhitelisted: false,       // ❌ TEMPORAL: No rechazar propiedades extras
-    transform: true,                   // Transformar payloads a DTOs
-    stopAtFirstError: false,           // ❌ TEMPORAL: Mostrar todos los errores
-    exceptionFactory: (errors: ValidationError[]) => {
-      console.log('🚨 ValidationPipe Errors:', errors.map(error => ({
-        property: error.property,
-        constraints: error.constraints,
-        value: error.value
-      })));
-      const messages = errors.map(error => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        const constraintsMap: Record<string, string> = (error.constraints ?? {}) as Record<string, string>;
-        const constraints: string[] = Object.values(constraintsMap);
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      stopAtFirstError: true,
+      exceptionFactory: (errors: ValidationError[]) => {
+        const messages = errors.map((error) => {
+          const constraintsMap: Record<string, string> = (error.constraints ??
+            {}) as Record<string, string>;
+          const constraints: string[] = Object.values(constraintsMap);
+          return {
+            field: error.property,
+            errors: constraints,
+          };
+        });
         return {
-          field: error.property,
-          errors: constraints
+          statusCode: 400,
+          message: 'Errores de validación',
+          errors: messages,
         };
-      });
-      return {
-        statusCode: 400,
-        message: 'Errores de validación',
-        errors: messages
-      };
-    }
-  }));
+      },
+    }),
+  );
 
-  // ✅ CONFIGURACIÓN CORS MULTI-ENTORNO
-  const allowedOrigins = {
+  const nodeEnv = process.env.NODE_ENV || 'development';
+
+  const corsOriginsByEnv: Record<string, string[]> = {
     development: [
-      'http://localhost:3000',    // Backend mismo dominio
-      'http://localhost:5173',    // Vite dev server (puerto por defecto)
-      'http://localhost:4173',    // Vite preview
-      'http://127.0.0.1:5173',   // Alternativa localhost
-      'http://127.0.0.1:3000',   // Backend mismo dominio
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://localhost:4173',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:3000',
     ],
-    staging: [
-      'https://tu-frontend-staging.vercel.app',
-      'https://tu-frontend-staging.netlify.app',
-      // Agregar otros dominios de staging según necesites
-    ],
-    production: [
-      'https://tu-frontend-produccion.com',
-      'https://www.tu-frontend-produccion.com',
-      // Agregar otros dominios de producción según necesites
-    ]
+    staging: process.env.CORS_ORIGINS_STAGING
+      ? process.env.CORS_ORIGINS_STAGING.split(',').map((o) => o.trim())
+      : [],
+    production: process.env.CORS_ORIGINS
+      ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
+      : [],
   };
 
-  // Determinar el entorno actual
-  const nodeEnv = process.env.NODE_ENV || 'development';
-  const origins = allowedOrigins[nodeEnv as keyof typeof allowedOrigins] || allowedOrigins.development;
+  const origins = corsOriginsByEnv[nodeEnv] ?? corsOriginsByEnv.development;
 
   app.enableCors({
     origin: origins,
-    credentials: true,             // Permitir cookies y headers de auth
+    credentials: true, // Permitir cookies y headers de auth
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: [
       'Content-Type',
@@ -71,7 +62,7 @@ async function bootstrap() {
       'Accept',
       'Origin',
       'Access-Control-Request-Method',
-      'Access-Control-Request-Headers'
+      'Access-Control-Request-Headers',
     ],
     exposedHeaders: ['Authorization'], // Exponer headers para el frontend
     maxAge: 86400, // Cache preflight por 24 horas

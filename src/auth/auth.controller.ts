@@ -11,13 +11,12 @@ export class AuthController {
 
   @Post('register')
   async register(@Body() dto: RegisterDto) {
-    console.log('Register request:', { email: dto.email, username: dto.username });
     try {
       const result = await this.authService.register(dto);
       return {
         success: true,
         data: result,
-        message: 'User registered successfully'
+        message: 'User registered successfully',
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -30,30 +29,15 @@ export class AuthController {
 
   @Post('login')
   async login(@Body() dto: LoginDto) {
-    // Enhanced logging for debugging
-    console.log('🔐 === LOGIN REQUEST DEBUG ===');
-    console.log('🔐 Raw DTO received:', JSON.stringify(dto, null, 2));
-    console.log('🔐 DTO properties:', Object.keys(dto));
-    console.log('🔐 DTO values:', Object.values(dto));
-
-    const { email, password } = dto;
-    console.log('🔐 Parsed data:', {
-      email,
-      password: password ? '***PROVIDED***' : 'MISSING',
-      passwordType: typeof password,
-      emailType: typeof email
-    });
-
     try {
       const result = await this.authService.login(dto);
       return {
         success: true,
         data: result,
-        message: 'Login successful'
+        message: 'Login successful',
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      console.log('🔐 Login error:', message);
       throw new BadRequestException({
         code: 'LOGIN_ERROR',
         message,
