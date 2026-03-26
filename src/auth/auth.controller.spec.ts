@@ -59,11 +59,21 @@ describe('AuthController', () => {
 
   it('should login a user', async () => {
     const dto: LoginDto = { email: 'test@gmail.com', password: 'password123' };
-    (service.login as vi.Mock).mockResolvedValue({ session: 'session-token' });
+    const mockUser = { id: 'user-id', username: 'testuser', email: 'test@gmail.com' };
+    (service.login as vi.Mock).mockResolvedValue({
+      user: mockUser,
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+    });
 
-    const result = await controller.login(dto);
-    expect(result.success).toBe(true);
-    expect(result.data).toEqual({ session: 'session-token' });
+    const mockRes = {
+      cookie: vi.fn(),
+    };
+
+    const result = await controller.login(dto, mockRes as any);
+    expect(result).toEqual(mockUser);
+    expect(mockRes.cookie).toHaveBeenCalledWith('access_token', 'access-token', expect.any(Object));
+    expect(mockRes.cookie).toHaveBeenCalledWith('refresh_token', 'refresh-token', expect.any(Object));
   });
 
   it('should handle login error', async () => {
@@ -73,6 +83,10 @@ describe('AuthController', () => {
     };
     (service.login as vi.Mock).mockRejectedValue(new Error('Login failed'));
 
-    await expect(controller.login(dto)).rejects.toThrowError('Login failed');
+    const mockRes = {
+      cookie: vi.fn(),
+    };
+
+    await expect(controller.login(dto, mockRes as any)).rejects.toThrowError('Login failed');
   });
 });

@@ -1,6 +1,7 @@
 // src/auth/auth.controller.ts
 
-import { Body, Controller, Post, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Post, BadRequestException, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -28,14 +29,26 @@ export class AuthController {
   }
 
   @Post('login')
-  async login(@Body() dto: LoginDto) {
+  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
     try {
-      const result = await this.authService.login(dto);
-      return {
-        success: true,
-        data: result,
-        message: 'Login successful',
-      };
+      const { user, accessToken, refreshToken } = await this.authService.login(dto);
+
+      res.cookie('access_token', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 15 * 60 * 1000,
+      });
+
+      res.cookie('refresh_token', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/api/v1/auth/refresh',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      return user;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       throw new BadRequestException({
