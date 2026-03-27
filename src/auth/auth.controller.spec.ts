@@ -1,6 +1,6 @@
 // src/auth/auth.controller.spec.ts
 
-import { vi } from 'vitest';
+import { vi, type Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -35,7 +35,7 @@ describe('AuthController', () => {
       username: 'testuser',
       password: 'password123',
     };
-    (service.register as vi.Mock).mockResolvedValue({ id: 'user-id' });
+    (service.register as Mock).mockResolvedValue({ id: 'user-id' });
 
     const result = await controller.register(dto);
     expect(result.success).toBe(true);
@@ -48,9 +48,7 @@ describe('AuthController', () => {
       username: 'failuser',
       password: 'password123',
     };
-    (service.register as vi.Mock).mockRejectedValue(
-      new Error('Register failed'),
-    );
+    (service.register as Mock).mockRejectedValue(new Error('Register failed'));
 
     await expect(controller.register(dto)).rejects.toThrowError(
       'Register failed',
@@ -59,7 +57,7 @@ describe('AuthController', () => {
 
   it('should login a user', async () => {
     const dto: LoginDto = { email: 'test@gmail.com', password: 'password123' };
-    (service.login as vi.Mock).mockResolvedValue({ session: 'session-token' });
+    (service.login as Mock).mockResolvedValue({ session: 'session-token' });
 
     const result = await controller.login(dto);
     expect(result.success).toBe(true);
@@ -71,7 +69,7 @@ describe('AuthController', () => {
       email: 'fail@example.com',
       password: 'password123',
     };
-    (service.login as vi.Mock).mockRejectedValue(new Error('Login failed'));
+    (service.login as Mock).mockRejectedValue(new Error('Login failed'));
 
     await expect(controller.login(dto)).rejects.toThrowError('Login failed');
   });
