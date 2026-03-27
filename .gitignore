@@ -59,3 +59,8 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # npm lockfile (project uses pnpm)
 package-lock.json
+
+.github/workflows/claude.yml
+# Si luego se quiere añadir:
+# git add .github/workflows/claude.yml
+# git commit -m "chore: add Claude Code GitHub Actions workflow"
