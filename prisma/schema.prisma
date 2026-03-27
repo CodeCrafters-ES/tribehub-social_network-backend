@@ -34,14 +34,15 @@ generator client {
 // =============================================================================
 
 model User {
-  id          String    @id @default(uuid())
-  supabaseId  String    @unique // UUID del usuario en Supabase Auth
-  email       String    @unique
-  username    String    @unique
-  status      UserStatus @default(ACTIVE)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime? // null = activo; valor = soft deleted
+  id            String     @id @default(uuid())
+  supabaseId    String?    @unique // UUID del usuario en Supabase Auth (nullable para flexibilidad)
+  email         String     @unique
+  username      String     @unique
+  passwordHash  String?    // Hash Argon2 de la contraseña (nunca texto plano)
+  status        UserStatus @default(ACTIVE)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?  // null = activo; valor = soft deleted
 
   // Relaciones
   profile     Profile?
