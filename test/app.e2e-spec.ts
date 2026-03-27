@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
@@ -14,8 +15,8 @@ describe('AppController (e2e)', () => {
     })
       .overrideProvider(PrismaService)
       .useValue({
-        $connect: jest.fn(),
-        $disconnect: jest.fn(),
+        $connect: vi.fn(),
+        $disconnect: vi.fn(),
       })
       .compile();
 
