@@ -11,6 +11,7 @@
   },
   "scripts": {
     "preinstall": "node -e \"const a=process.env.npm_config_user_agent;if(a&&!a.startsWith('pnpm')){console.error('\\nUse pnpm to install dependencies: https://pnpm.io\\n');process.exit(1)}\"",
+    "postinstall": "prisma generate",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
