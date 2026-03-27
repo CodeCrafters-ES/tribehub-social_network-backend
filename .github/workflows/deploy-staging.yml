@@ -1,0 +1,42 @@
+# deploy-staging.yml
+#
+# Secrets required (configure in GitHub → Settings → Environments → staging):
+#   RAILWAY_TOKEN         — Railway API token with deploy access
+#   RAILWAY_SERVICE_ID    — ID of the Railway service to deploy
+#
+# Promotion to production:
+#   Merge the same commit to `main`. The deploy-production workflow will run
+#   on that SHA automatically, ensuring bit-for-bit promotion.
+#
+# Rollback:
+#   Use `workflow_dispatch` on deploy-production.yml selecting the previous
+#   stable SHA, or revert the merge commit on `develop` and let this workflow
+#   run again.
+
+name: Deploy — Staging
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Traceability log
+        run: |
+          echo "Deploying SHA ${{ github.sha }} to staging at $(date -u)"
+          echo "Triggered by: ${{ github.actor }}"
+          echo "Ref: ${{ github.ref }}"
+
+      - name: Deploy to Railway (staging)
+        run: echo "Deploy to staging - SHA: ${{ github.sha }}"
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}

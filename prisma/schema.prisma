@@ -1,0 +1,186 @@
+// prisma/schema.prisma
+
+// =============================================================================
+// DATASOURCE
+// En Prisma 7+ la URL de conexión ya NO se configura aquí.
+// Se traslada a prisma.config.ts (ver ese archivo).
+// Solo se declara el proveedor para que Prisma sepa el dialecto SQL.
+// =============================================================================
+datasource db {
+  provider = "postgresql"
+}
+
+// =============================================================================
+// GENERATOR
+// Le dice a Prisma qué cliente generar cuando ejecutas `npx prisma generate`.
+// "prisma-client-js" genera el cliente TypeScript tipado que usarás en tu código.
+// =============================================================================
+generator client {
+  provider = "prisma-client-js"
+}
+
+// =============================================================================
+// MODELOS — Hito 1 MVP Crítico
+//
+// Convenciones aplicadas en todos los modelos:
+//   - id: UUID generado por la base de datos (no por la aplicación)
+//   - createdAt / updatedAt: gestionados automáticamente por Prisma
+//   - deletedAt: soft delete — NUNCA se borran registros de contenido de usuario
+//
+// Nota sobre la relación con Supabase Auth:
+//   Supabase gestiona la autenticación en su esquema interno "auth".
+//   El campo supabaseId en User almacena el UUID que Supabase asigna al usuario,
+//   permitiendo vincular ambos sistemas sin duplicar la lógica de auth.
+// =============================================================================
+
+model User {
+  id            String     @id @default(uuid())
+  supabaseId    String?    @unique // UUID del usuario en Supabase Auth (nullable para flexibilidad)
+  email         String     @unique
+  username      String     @unique
+  passwordHash  String?    // Hash Argon2 de la contraseña (nunca texto plano)
+  status        UserStatus @default(ACTIVE)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?  // null = activo; valor = soft deleted
+
+  // Relaciones
+  profile     Profile?
+  interests   UserInterest[]
+  posts       Post[]
+  comments    Comment[]
+  reactions   Reaction[]
+
+  @@map("users")
+}
+
+model Profile {
+  id          String    @id @default(uuid())
+  userId      String    @unique
+  displayName String
+  bio         String?
+  avatarUrl   String?
+  isPublic    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relaciones
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@map("profiles")
+}
+
+model Interest {
+  id        String         @id @default(uuid())
+  name      String         @unique
+  slug      String         @unique
+  createdAt DateTime       @default(now())
+
+  // Relaciones
+  users     UserInterest[]
+
+  @@map("interests")
+}
+
+model UserInterest {
+  userId     String
+  interestId String
+  createdAt  DateTime @default(now())
+
+  // Relaciones
+  user       User     @relation(fields: [userId], references: [id])
+  interest   Interest @relation(fields: [interestId], references: [id])
+
+  @@id([userId, interestId]) // Clave primaria compuesta: evita duplicados
+  @@map("user_interests")
+}
+
+model Post {
+  id        String    @id @default(uuid())
+  authorId  String
+  content   String
+  imageUrl  String?   // null si es post de solo texto
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // soft delete
+
+  // Relaciones
+  author    User       @relation(fields: [authorId], references: [id])
+  comments  Comment[]
+  reactions Reaction[]
+  assets    Asset[]
+
+  @@map("posts")
+}
+
+model Asset {
+  id          String      @id @default(uuid())
+  postId      String?     // null hasta que se complete el flujo de dos pasos
+  uploadUrl   String      // URL presignada temporal (expira)
+  storageUrl  String?     // URL final en el storage (se completa en el paso 2)
+  status      AssetStatus @default(PENDING)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relaciones
+  post        Post?       @relation(fields: [postId], references: [id])
+
+  @@map("assets")
+}
+
+model Comment {
+  id        String    @id @default(uuid())
+  postId    String
+  authorId  String
+  content   String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // soft delete
+
+  // Relaciones
+  post      Post      @relation(fields: [postId], references: [id])
+  author    User      @relation(fields: [authorId], references: [id])
+
+  @@map("comments")
+}
+
+model Reaction {
+  id        String       @id @default(uuid())
+  postId    String
+  userId    String
+  type      ReactionType
+  createdAt DateTime     @default(now())
+
+  // Relaciones
+  post      Post         @relation(fields: [postId], references: [id])
+  user      User         @relation(fields: [userId], references: [id])
+
+  // Un usuario solo puede tener UNA reacción por post (No-Op en duplicados)
+  @@unique([postId, userId])
+  @@map("reactions")
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum AssetStatus {
+  PENDING   // Presigned URL generada, cliente aún no ha subido
+  UPLOADED  // Cliente completó la subida
+  ATTACHED  // Asset vinculado a un post/perfil
+}
+
+enum ReactionType {
+  LIKE
+  LOVE
+  HAHA
+  WOW
+  SAD
+  ANGRY
+}
