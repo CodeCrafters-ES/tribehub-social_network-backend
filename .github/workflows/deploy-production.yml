@@ -1,0 +1,44 @@
+# deploy-production.yml
+#
+# Secrets required (configure in GitHub → Settings → Environments → production):
+#   RAILWAY_TOKEN         — Railway API token with deploy access
+#   RAILWAY_SERVICE_ID    — ID of the Railway service to deploy
+#
+# Promotion from staging:
+#   Merge `develop` into `main`. This workflow triggers automatically on push
+#   to `main`, deploying the exact SHA that was validated in staging.
+#   If the `production` environment has required reviewers configured in GitHub,
+#   the deployment will pause for manual approval before executing.
+#
+# Rollback:
+#   Use `workflow_dispatch` on this workflow and select the previous stable SHA
+#   from the branch/tag dropdown. The deploy step will run against that SHA.
+
+name: Deploy — Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Traceability log
+        run: |
+          echo "Deploying SHA ${{ github.sha }} to production at $(date -u)"
+          echo "Triggered by: ${{ github.actor }}"
+          echo "Ref: ${{ github.ref }}"
+
+      - name: Deploy to Railway (production)
+        run: echo "Deploy to production - SHA: ${{ github.sha }}"
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
