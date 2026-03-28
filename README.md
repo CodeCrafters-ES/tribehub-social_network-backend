@@ -51,7 +51,7 @@ sequenceDiagram
     participant S as AuthService
     participant U as Supabase
 
-    C->>A: POST /auth/register
+    C->>A: POST /api/v1/auth/register
     A->>S: register(userData)
     S->>U: createUser(email, password)
     U-->>S: userRecord
@@ -124,8 +124,10 @@ La API estará disponible en `http://localhost:3000`
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| POST | `/auth/register` | Registro de nuevos usuarios |
-| POST | `/auth/login` | Inicio de sesión |
+| POST | `/api/v1/auth/register` | Registro de nuevos usuarios |
+| POST | `/api/v1/auth/login` | Inicio de sesión |
+| POST | `/api/v1/auth/refresh` | Renovar sesión con refresh token |
+| POST | `/api/v1/auth/logout` | Cerrar sesión e invalidar refresh token |
 | GET | `/auth/profile` | Obtener perfil del usuario |
 
 ---
