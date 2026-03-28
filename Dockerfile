@@ -15,7 +15,7 @@ COPY prisma ./prisma/
 # Install dependencies and generate Prisma client
 RUN pnpm install --frozen-lockfile
 
-# Copy source code
+# Copy source code (.dockerignore excludes node_modules and dist)
 COPY . .
 
 # Compile TypeScript to dist/
