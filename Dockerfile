@@ -20,8 +20,7 @@ COPY . .
 
 # Compile TypeScript to dist/
 RUN pnpm run build
-RUN test -f dist/main.js && echo "dist/main.js EXISTS" || (echo "dist/main.js NOT FOUND" && find /app/dist -name "*.js" 2>/dev/null | head -20 && exit 1)
 
 EXPOSE 3000
 
-CMD ["node", "dist/main"]
+CMD ["node", "dist/src/main"]
