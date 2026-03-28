@@ -19,7 +19,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 # Compile TypeScript to dist/
-RUN pnpm run build
+RUN pnpm run build && echo "=== dist contents ===" && ls -la dist/ || echo "=== dist/ NOT FOUND ==="
 
 EXPOSE 3000
 
