@@ -15,7 +15,7 @@ SUPABASE_ANON_KEY=tu-anon-key-de-supabase
 
 ### Registro de usuario
 
-**POST** `/auth/register`
+**POST** `/api/v1/auth/register`
 
 ```json
 {
@@ -40,7 +40,7 @@ SUPABASE_ANON_KEY=tu-anon-key-de-supabase
 
 ### Login de usuario
 
-**POST** `/auth/login`
+**POST** `/api/v1/auth/login`
 
 ```json
 {
@@ -74,14 +74,14 @@ SUPABASE_ANON_KEY=tu-anon-key-de-supabase
 ## Guía de integración frontend
 
 1. **Registro:**  
-   Envía los datos al endpoint `/auth/register`.  
+   Envía los datos al endpoint `/api/v1/auth/register`.  
    Muestra mensaje de confirmación y solicita al usuario verificar su email.
 
 2. **Confirmación de email:**  
    El usuario debe hacer clic en el enlace enviado por Supabase.
 
 3. **Login:**  
-   Envía email y password a `/auth/login`.  
+   Envía email y password a `/api/v1/auth/login`.  
    Si el email está confirmado, recibirás el token JWT en `data.session.access_token`.
 
 4. **Uso del token:**  
@@ -91,14 +91,14 @@ SUPABASE_ANON_KEY=tu-anon-key-de-supabase
 **Ejemplo con fetch:**
 ```js
 // Registro
-fetch('/auth/register', {
+fetch('/api/v1/auth/register', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ email, username, password })
 });
 
 // Login
-const res = await fetch('/auth/login', {
+const res = await fetch('/api/v1/auth/login', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ email, password })
@@ -120,7 +120,7 @@ const token = data.session.access_token;
 ## Flujo recomendado
 
 ```
-Frontend -> /auth/register -> Confirmar Email -> /auth/login -> Obtener Token -> Usar Token en rutas protegidas
+Frontend -> /api/v1/auth/register -> Confirmar Email -> /api/v1/auth/login -> /api/v1/auth/refresh -> /api/v1/auth/logout
 
 ```
 
@@ -156,3 +156,26 @@ Para ejecutar los tests del módulo de autenticación:
   ```
 
 Los resultados aparecerán en la terminal indicando si las pruebas pasaron o fallaron.
+### Refresh de sesión
+
+**POST** `/api/v1/auth/refresh`
+
+Puede recibir el refresh token vía:
+- `body.refreshToken`
+- header `x-refresh-token`
+- header `Authorization: Bearer <refreshToken>`
+- cookie `refreshToken`
+
+Si el token está en blacklist de Redis, responde `401`.
+
+---
+
+### Logout (idempotente)
+
+**POST** `/api/v1/auth/logout`
+
+Revoca el refresh token en Redis blacklist usando `jti` (si existe) o hash SHA-256 del token como fallback.
+
+El endpoint es idempotente: repetir logout no rompe el flujo.
+
+---

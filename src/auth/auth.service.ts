@@ -2,8 +2,10 @@
 
 import {
   Injectable,
+  BadRequestException,
   ConflictException,
   InternalServerErrorException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import * as argon2 from 'argon2';
 
@@ -11,10 +13,14 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { getSupabaseClient } from '../config/supabase.config';
 import { UsersRepository } from '../modules/users/repositories/users.repository';
+import { RefreshTokenBlacklistService } from './refresh-token-blacklist.service';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly usersRepository: UsersRepository) {}
+  constructor(
+    private readonly usersRepository: UsersRepository,
+    private readonly refreshTokenBlacklistService: RefreshTokenBlacklistService,
+  ) {}
 
   async register(data: RegisterDto) {
     const { email, password, username } = data;
@@ -91,5 +97,49 @@ export class AuthService {
       throw new Error(error.message);
     }
     return signInData;
+  }
+
+  async refresh(refreshToken?: string) {
+    if (!refreshToken) {
+      throw new BadRequestException({
+        code: 'REFRESH_TOKEN_REQUIRED',
+        message: 'Refresh token is required',
+      });
+    }
+
+    if (!this.hasValidJwtStructure(refreshToken)) {
+      throw new BadRequestException({
+        code: 'MALFORMED_REFRESH_TOKEN',
+        message: 'Malformed refresh token',
+      });
+    }
+
+    await this.refreshTokenBlacklistService.assertNotRevoked(refreshToken);
+
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.auth.refreshSession({
+      refresh_token: refreshToken,
+    });
+
+    if (error || !data?.session) {
+      throw new UnauthorizedException({
+        code: 'INVALID_REFRESH_TOKEN',
+        message: 'Invalid refresh token',
+      });
+    }
+
+    return data;
+  }
+
+  async logout(refreshToken?: string): Promise<void> {
+    if (!refreshToken || !this.hasValidJwtStructure(refreshToken)) {
+      return;
+    }
+
+    await this.refreshTokenBlacklistService.revoke(refreshToken);
+  }
+
+  private hasValidJwtStructure(token: string): boolean {
+    return token.split('.').length === 3;
   }
 }

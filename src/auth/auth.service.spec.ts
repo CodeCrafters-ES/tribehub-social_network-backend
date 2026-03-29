@@ -1,7 +1,11 @@
 // src/auth/auth.service.spec.ts
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { ConflictException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  UnauthorizedException,
+} from '@nestjs/common';
 
 // Mock argon2 before importing AuthService
 vi.mock('argon2', () => ({
@@ -19,6 +23,7 @@ import * as argon2 from 'argon2';
 
 const mockSignUp = vi.fn();
 const mockSignInWithPassword = vi.fn();
+const mockRefreshSession = vi.fn();
 
 const mockUsersRepository = {
   findByEmail: vi.fn(),
@@ -26,8 +31,16 @@ const mockUsersRepository = {
   create: vi.fn(),
 };
 
+const mockRefreshTokenBlacklistService = {
+  revoke: vi.fn(),
+  assertNotRevoked: vi.fn(),
+};
+
 function buildService(): AuthService {
-  return new AuthService(mockUsersRepository as never);
+  return new AuthService(
+    mockUsersRepository as never,
+    mockRefreshTokenBlacklistService as never,
+  );
 }
 
 beforeEach(() => {
@@ -37,6 +50,7 @@ beforeEach(() => {
     auth: {
       signUp: mockSignUp,
       signInWithPassword: mockSignInWithPassword,
+      refreshSession: mockRefreshSession,
     },
   } as never);
 });
@@ -182,5 +196,93 @@ describe('AuthService.login', () => {
     const service = buildService();
 
     await expect(service.login(dto)).rejects.toThrow('Invalid credentials');
+  });
+});
+
+describe('AuthService.refresh', () => {
+  it('throws BadRequestException when refresh token is missing', async () => {
+    const service = buildService();
+
+    await expect(service.refresh(undefined)).rejects.toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('throws BadRequestException when refresh token is malformed', async () => {
+    const service = buildService();
+
+    await expect(service.refresh('malformed-token')).rejects.toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('throws UnauthorizedException when token is revoked', async () => {
+    const refreshToken = 'header.payload.signature';
+    mockRefreshTokenBlacklistService.assertNotRevoked.mockRejectedValue(
+      new UnauthorizedException('Invalid refresh token'),
+    );
+
+    const service = buildService();
+
+    await expect(service.refresh(refreshToken)).rejects.toThrow(
+      UnauthorizedException,
+    );
+    expect(mockRefreshSession).not.toHaveBeenCalled();
+  });
+
+  it('returns refreshed session when token is valid', async () => {
+    const refreshToken = 'header.payload.signature';
+    const refreshedData = { session: { access_token: 'new-access' }, user: {} };
+
+    mockRefreshTokenBlacklistService.assertNotRevoked.mockResolvedValue(
+      undefined,
+    );
+    mockRefreshSession.mockResolvedValue({
+      data: refreshedData,
+      error: null,
+    });
+
+    const service = buildService();
+    const result = await service.refresh(refreshToken);
+
+    expect(
+      mockRefreshTokenBlacklistService.assertNotRevoked,
+    ).toHaveBeenCalledWith(refreshToken);
+    expect(mockRefreshSession).toHaveBeenCalledWith({
+      refresh_token: refreshToken,
+    });
+    expect(result).toEqual(refreshedData);
+  });
+});
+
+describe('AuthService.logout', () => {
+  it('revokes a valid refresh token', async () => {
+    const refreshToken = 'header.payload.signature';
+    mockRefreshTokenBlacklistService.revoke.mockResolvedValue(undefined);
+
+    const service = buildService();
+    await service.logout(refreshToken);
+
+    expect(mockRefreshTokenBlacklistService.revoke).toHaveBeenCalledWith(
+      refreshToken,
+    );
+  });
+
+  it('is idempotent for repeated logout calls', async () => {
+    const refreshToken = 'header.payload.signature';
+    mockRefreshTokenBlacklistService.revoke.mockResolvedValue(undefined);
+
+    const service = buildService();
+    await service.logout(refreshToken);
+    await service.logout(refreshToken);
+
+    expect(mockRefreshTokenBlacklistService.revoke).toHaveBeenCalledTimes(2);
+  });
+
+  it('does nothing when refresh token is missing', async () => {
+    const service = buildService();
+    await service.logout(undefined);
+
+    expect(mockRefreshTokenBlacklistService.revoke).not.toHaveBeenCalled();
   });
 });

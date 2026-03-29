@@ -2,7 +2,6 @@
 
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import type { User } from '@prisma/client';
 
 export interface CreateUserData {
   email: string;
@@ -11,11 +10,23 @@ export interface CreateUserData {
   supabaseId?: string;
 }
 
+export interface UserRecord {
+  id: string;
+  email: string;
+  username: string;
+  passwordHash: string | null;
+  supabaseId: string | null;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
 @Injectable()
 export class UsersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: CreateUserData): Promise<User> {
+  create(data: CreateUserData): Promise<UserRecord> {
     return this.prisma.user.create({
       data: {
         email: data.email,
@@ -26,7 +37,7 @@ export class UsersRepository {
     });
   }
 
-  async findByEmail(email: string): Promise<User | null> {
+  findByEmail(email: string): Promise<UserRecord | null> {
     return this.prisma.user.findFirst({
       where: {
         email,
@@ -35,7 +46,7 @@ export class UsersRepository {
     });
   }
 
-  async findByUsername(username: string): Promise<User | null> {
+  findByUsername(username: string): Promise<UserRecord | null> {
     return this.prisma.user.findFirst({
       where: {
         username,
