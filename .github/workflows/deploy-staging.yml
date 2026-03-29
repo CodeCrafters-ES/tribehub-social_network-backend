@@ -35,8 +35,10 @@ jobs:
           echo "Triggered by: ${{ github.actor }}"
           echo "Ref: ${{ github.ref }}"
 
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
       - name: Deploy to Railway (staging)
-        run: echo "Deploy to staging - SHA: ${{ github.sha }}"
+        run: railway up --service ${{ secrets.RAILWAY_SERVICE_ID }} --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
