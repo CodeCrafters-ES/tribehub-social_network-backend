@@ -1,0 +1,75 @@
+openapi: 3.0.3
+info:
+  title: TribeHub Auth API
+  version: 1.0.0
+  description: Endpoints de autenticación con logout seguro por blacklist en Redis.
+servers:
+  - url: /
+paths:
+  /api/v1/auth/logout:
+    post:
+      summary: Logout idempotente
+      description: Revoca el refresh token en Redis blacklist y finaliza sesión.
+      tags: [Auth]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Logout ejecutado (idempotente)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Logout successful
+        '503':
+          description: Servicio de revocación no disponible
+  /api/v1/auth/refresh:
+    post:
+      summary: Refresh de sesión
+      description: Emite un nuevo access token si el refresh token no está revocado.
+      tags: [Auth]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Sesión refrescada correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Token refreshed successfully
+                  data:
+                    type: object
+        '400':
+          description: Token ausente o malformado
+        '401':
+          description: Token inválido o revocado
+        '503':
+          description: Servicio de validación de revocación no disponible
+components: {}
