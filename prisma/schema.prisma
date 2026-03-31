@@ -45,13 +45,29 @@ model User {
   deletedAt     DateTime?  // null = activo; valor = soft deleted
 
   // Relaciones
-  profile     Profile?
-  interests   UserInterest[]
-  posts       Post[]
-  comments    Comment[]
-  reactions   Reaction[]
+  profile       Profile?
+  interests     UserInterest[]
+  posts         Post[]
+  comments      Comment[]
+  reactions     Reaction[]
+  refreshTokens RefreshToken[]
 
   @@map("users")
+}
+
+model RefreshToken {
+  id               String    @id @default(uuid())
+  userId           String
+  tokenHash        String    @unique // SHA-256 hash del refresh token (nunca texto plano)
+  revokedAt        DateTime? // null = activo; valor = revocado
+  revocationReason String?   // 'logout' | 'rotation' | 'admin'
+  createdAt        DateTime  @default(now())
+  expiresAt        DateTime  // Fecha de expiración del token
+
+  // Relaciones
+  user             User      @relation(fields: [userId], references: [id])
+
+  @@map("refresh_tokens")
 }
 
 model Profile {
