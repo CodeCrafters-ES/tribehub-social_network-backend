@@ -65,8 +65,9 @@ model RefreshToken {
   expiresAt        DateTime  // Fecha de expiración del token
 
   // Relaciones
-  user             User      @relation(fields: [userId], references: [id])
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("refresh_tokens")
 }
 

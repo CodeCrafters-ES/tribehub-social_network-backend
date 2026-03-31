@@ -5,6 +5,7 @@
 // refresh-token data. No other module may access the refresh_tokens table.
 
 import { Injectable } from '@nestjs/common';
+import type { PrismaClient } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 /** Shape of a persisted refresh token record as returned by Prisma queries. */
@@ -30,14 +31,14 @@ export class AuthRepository {
   findActiveRefreshToken(
     tokenHash: string,
   ): Promise<RefreshTokenRecord | null> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    return this.prisma.refreshToken.findFirst({
+    const client = this.prisma as unknown as PrismaClient;
+    return client.refreshToken.findFirst({
       where: {
         tokenHash,
         revokedAt: null,
         expiresAt: { gt: new Date() },
       },
-    });
+    }) as Promise<RefreshTokenRecord | null>;
   }
 
   /**
@@ -48,8 +49,8 @@ export class AuthRepository {
     tokenHash: string,
     reason: string = 'logout',
   ): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    await this.prisma.refreshToken.updateMany({
+    const client = this.prisma as unknown as PrismaClient;
+    await client.refreshToken.updateMany({
       where: {
         tokenHash,
         revokedAt: null,

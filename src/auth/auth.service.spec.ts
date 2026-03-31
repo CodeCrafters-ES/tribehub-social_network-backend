@@ -261,4 +261,38 @@ describe('AuthService.logout', () => {
 
     expect(hashAlpha).not.toBe(hashBeta);
   });
+
+  it('resolves without throwing when the DB throws during findActiveRefreshToken', async () => {
+    mockAuthRepository.findActiveRefreshToken.mockRejectedValue(
+      new Error('DB connection lost'),
+    );
+
+    const service = buildService();
+
+    // Must not throw — DB errors are absorbed to keep logout best-effort.
+    await expect(service.logout('some-raw-token')).resolves.toBeUndefined();
+
+    expect(mockAuthRepository.revokeRefreshToken).not.toHaveBeenCalled();
+  });
+
+  it('resolves without throwing when the DB throws during revokeRefreshToken', async () => {
+    const tokenRecord = {
+      id: 'token-uuid',
+      userId: 'user-uuid',
+      tokenHash: 'hashed-value',
+      revokedAt: null,
+      expiresAt: new Date(Date.now() + 3600_000),
+      createdAt: new Date(),
+      revocationReason: null,
+    };
+    mockAuthRepository.findActiveRefreshToken.mockResolvedValue(tokenRecord);
+    mockAuthRepository.revokeRefreshToken.mockRejectedValue(
+      new Error('DB write failed'),
+    );
+
+    const service = buildService();
+
+    // Must not throw — DB errors are absorbed.
+    await expect(service.logout('some-raw-token')).resolves.toBeUndefined();
+  });
 });
