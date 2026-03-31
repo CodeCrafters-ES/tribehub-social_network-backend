@@ -27,11 +27,7 @@ export class RegisterRequestDto {
   password: string;
 }
 
-import {
-  registerDecorator,
-  ValidationOptions,
-  ValidationArguments,
-} from 'class-validator';
+import { registerDecorator, ValidationOptions } from 'class-validator';
 
 export function NoSpaces(validationOptions?: ValidationOptions) {
   return function (object: object, propertyName: string) {
@@ -41,7 +37,7 @@ export function NoSpaces(validationOptions?: ValidationOptions) {
       propertyName,
       options: validationOptions,
       validator: {
-        validate(value: any, _args: ValidationArguments) {
+        validate(value: unknown) {
           return typeof value === 'string' && !/\s/g.test(value);
         },
       },
