@@ -4,17 +4,28 @@ import {
   Injectable,
   ConflictException,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import * as argon2 from 'argon2';
+import { createHash } from 'crypto';
 
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { getSupabaseClient } from '../config/supabase.config';
 import { UsersRepository } from '../modules/users/repositories/users.repository';
+import {
+  AuthRepository,
+  type RefreshTokenRecord,
+} from './repositories/auth.repository';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly usersRepository: UsersRepository) {}
+  private readonly logger = new Logger(AuthService.name);
+
+  constructor(
+    private readonly usersRepository: UsersRepository,
+    private readonly authRepository: AuthRepository,
+  ) {}
 
   async register(data: RegisterDto) {
     const { email, password, username } = data;
@@ -91,5 +102,48 @@ export class AuthService {
       throw new Error(error.message);
     }
     return signInData;
+  }
+
+  /**
+   * Revokes the refresh token identified by the raw token value read from the
+   * httpOnly cookie. The method is idempotent: if no token is present, or the
+   * token is already revoked / expired, it returns without error.
+   *
+   * DB errors are absorbed and logged — logout is best-effort so that cookies
+   * are always cleared by the controller regardless of DB availability.
+   *
+   * @param rawToken - Raw refresh token value from the cookie (may be undefined).
+   */
+  async logout(rawToken: string | undefined): Promise<void> {
+    if (!rawToken) {
+      this.logger.log({ event: 'auth.logout.no_token' });
+      return;
+    }
+
+    // Hash the raw token before querying; we never store raw tokens.
+    const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+
+    try {
+      const token: RefreshTokenRecord | null =
+        await this.authRepository.findActiveRefreshToken(tokenHash);
+
+      if (!token) {
+        // Cookie present but token not found or already revoked — different
+        // observability case from "no cookie at all".
+        this.logger.log({ event: 'auth.logout.token_not_active' });
+        return;
+      }
+
+      await this.authRepository.revokeRefreshToken(tokenHash, 'logout');
+
+      const { userId } = token;
+      this.logger.log({ event: 'auth.logout.success', userId });
+    } catch (err: unknown) {
+      // DB errors must not prevent cookie cleanup — log and absorb.
+      this.logger.error({
+        event: 'auth.logout.db_error',
+        message: err instanceof Error ? err.message : 'Unknown DB error',
+      });
+    }
   }
 }
