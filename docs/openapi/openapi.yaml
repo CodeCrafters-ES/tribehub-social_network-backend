@@ -204,7 +204,7 @@ components:
       properties:
         accessToken:
           type: string
-          description: Short-lived JWT access token (Authorization: Bearer)
+          description: "Short-lived JWT access token (Authorization: Bearer)"
           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         refreshToken:
           type: string
