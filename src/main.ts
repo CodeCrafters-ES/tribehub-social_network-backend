@@ -67,7 +67,7 @@ async function bootstrap() {
       'Access-Control-Request-Method',
       'Access-Control-Request-Headers',
     ],
-    exposedHeaders: ['Authorization'], // Exponer headers para el frontend
+    exposedHeaders: ['Authorization', 'X-Request-Id'], // Exponer headers para el frontend
     maxAge: 86400, // Cache preflight por 24 horas
   });
 
