@@ -23,7 +23,8 @@
     "test": "vitest run --config vitest.unit.config.ts",
     "test:cov": "vitest run --config vitest.unit.config.ts --coverage",
     "test:unit": "vitest run --config vitest.unit.config.ts",
-    "test:integration": "vitest run --config vitest.integration.config.ts"
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "lint:api": "spectral lint docs/openapi/openapi.yaml --display-only-failures"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -49,6 +50,7 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
+    "@stoplight/spectral-cli": "^6.15.0",
     "@swc/cli": "^0.6.0",
     "@swc/core": "^1.10.7",
     "@types/cookie-parser": "^1.4.10",
