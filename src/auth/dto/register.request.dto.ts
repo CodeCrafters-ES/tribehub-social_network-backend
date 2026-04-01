@@ -16,9 +16,6 @@ export class RegisterRequestDto {
   username: string;
 
   @IsNotEmpty({ always: true, message: 'La contraseña no debe ir vacía' })
-  @MinLength(8, {
-    message: 'La contraseña debe contener al menos ocho caracteres',
-  })
   @IsStrongPassword({
     minLength: 8,
     minLowercase: 1,
