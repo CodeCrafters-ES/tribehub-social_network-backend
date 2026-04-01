@@ -4,6 +4,7 @@ import {
   IsStrongPassword,
   MinLength,
 } from 'class-validator';
+import { NoSpaces } from '../../common/decorators/no-spaces.decorator';
 
 export class RegisterRequestDto {
   @IsEmail()
