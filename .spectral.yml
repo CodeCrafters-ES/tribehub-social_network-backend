@@ -1,0 +1,12 @@
+extends:
+  - spectral:oas
+
+rules:
+  # Enforce operation IDs on every endpoint so generated clients and docs are stable.
+  operation-operationId: error
+
+  # Require at least one 2xx response per operation.
+  operation-success-response: error
+
+  # Disallow inline schemas for request/response bodies — keep $ref-based models.
+  oas3-schema: error

@@ -10,6 +10,7 @@ export const PrismaClient = class {
   asset = {};
   interest = {};
   userInterest = {};
+  refreshToken = {};
   $connect = () => Promise.resolve();
   $disconnect = () => Promise.resolve();
 };

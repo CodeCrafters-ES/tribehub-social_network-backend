@@ -20,6 +20,7 @@ describe('AuthController', () => {
           useValue: {
             register: vi.fn(),
             login: vi.fn(),
+            logout: vi.fn(),
           },
         },
       ],
@@ -72,5 +73,74 @@ describe('AuthController', () => {
     (service.login as Mock).mockRejectedValue(new Error('Login failed'));
 
     await expect(controller.login(dto)).rejects.toThrowError('Login failed');
+  });
+
+  describe('logout', () => {
+    function buildMockReq(cookieValue?: string) {
+      return {
+        cookies:
+          cookieValue !== undefined ? { refresh_token: cookieValue } : {},
+      } as unknown as import('express').Request;
+    }
+
+    function buildMockRes() {
+      return {
+        clearCookie: vi.fn(),
+      } as unknown as import('express').Response;
+    }
+
+    it('calls service.logout with the refresh_token cookie value', async () => {
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      const logoutMock = service.logout as Mock;
+      logoutMock.mockResolvedValue(undefined);
+      const req = buildMockReq('my-refresh-token');
+      const res = buildMockRes();
+
+      await controller.logout(req, res);
+
+      expect(logoutMock).toHaveBeenCalledOnce();
+      expect(logoutMock).toHaveBeenCalledWith('my-refresh-token');
+    });
+
+    it('calls service.logout with undefined when no cookie is present', async () => {
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      const logoutMock = service.logout as Mock;
+      logoutMock.mockResolvedValue(undefined);
+      const req = buildMockReq();
+      const res = buildMockRes();
+
+      await controller.logout(req, res);
+
+      expect(logoutMock).toHaveBeenCalledOnce();
+      expect(logoutMock).toHaveBeenCalledWith(undefined);
+    });
+
+    it('clears auth cookies regardless of service outcome', async () => {
+      (service.logout as Mock).mockResolvedValue(undefined);
+      const req = buildMockReq('my-refresh-token');
+      const res = buildMockRes();
+
+      await controller.logout(req, res);
+
+      // clearCookie must be called at least once for refresh_token and XSRF-TOKEN
+      expect(
+        (res.clearCookie as Mock).mock.calls.length,
+      ).toBeGreaterThanOrEqual(2);
+      const clearedNames = (res.clearCookie as Mock).mock.calls.map(
+        (c: unknown[]) => c[0],
+      );
+      expect(clearedNames).toContain('refresh_token');
+      expect(clearedNames).toContain('XSRF-TOKEN');
+    });
+
+    it('returns undefined (204 No Content body is empty)', async () => {
+      (service.logout as Mock).mockResolvedValue(undefined);
+      const req = buildMockReq('any-token');
+      const res = buildMockRes();
+
+      const result = await controller.logout(req, res);
+
+      expect(result).toBeUndefined();
+    });
   });
 });
