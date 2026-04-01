@@ -9,7 +9,7 @@ import {
 import * as argon2 from 'argon2';
 import { createHash } from 'crypto';
 
-import { RegisterDto } from './dto/register.dto';
+import { RegisterRequestDto } from './dto/register.request.dto';
 import { LoginDto } from './dto/login.dto';
 import { getSupabaseClient } from '../config/supabase.config';
 import { UsersRepository } from '../modules/users/repositories/users.repository';
@@ -27,7 +27,7 @@ export class AuthService {
     private readonly authRepository: AuthRepository,
   ) {}
 
-  async register(data: RegisterDto) {
+  async register(data: RegisterRequestDto) {
     const { email, password, username } = data;
 
     // Check for duplicate email
