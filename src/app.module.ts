@@ -7,6 +7,8 @@ import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { MetricsModule } from './observability/metrics/metrics.module';
+import { HttpMetricsInterceptor } from './observability/http-metrics.interceptor';
 
 @Module({
   imports: [
@@ -22,6 +24,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     }),
     PrismaModule, // Global: PrismaService queda disponible en toda la app
     AuthModule,
+    MetricsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -29,6 +32,10 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     {
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: HttpMetricsInterceptor,
     },
   ],
 })
