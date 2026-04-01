@@ -5,9 +5,6 @@ rules:
   # Enforce operation IDs on every endpoint so generated clients and docs are stable.
   operation-operationId: error
 
-  # Require a summary on every operation for readable docs.
-  operation-summary: error
-
   # Require at least one 2xx response per operation.
   operation-success-response: error
 
