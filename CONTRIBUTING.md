@@ -269,6 +269,34 @@ describe('AuthService', () => {
 
 ---
 
+## API Contract / OpenAPI
+
+El spec de la API vive en `docs/openapi/openapi.yaml`. Spectral lo valida en CI y bloquea el merge si detecta errores.
+
+### Ubicacion del spec
+
+```
+docs/openapi/openapi.yaml
+```
+
+### Lint local
+
+Antes de abrir un PR, verifica que el spec no tenga errores:
+
+```bash
+pnpm run lint:api
+```
+
+### Flujo al añadir o modificar un endpoint
+
+1. Actualiza `docs/openapi/openapi.yaml` con los cambios del endpoint (path, parametros, responses, schemas).
+2. Ejecuta `pnpm run lint:api` y corrige cualquier error que reporte Spectral.
+3. Abre el PR. El job `spectral_lint` en CI volverá a validar el spec — si falla, el merge queda bloqueado.
+
+El spec debe actualizarse en el mismo PR que el codigo del endpoint, nunca en un PR separado posterior.
+
+---
+
 ## ✅ **Scripts Disponibles**
 
 | Script | Descripción |
