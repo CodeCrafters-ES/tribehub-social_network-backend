@@ -1,7 +1,7 @@
 import {
   IsEmail,
   IsNotEmpty,
-  IsStrongPassword,
+  IsStrongPassword
 } from 'class-validator';
 import { NoSpaces } from '../../common/decorators/no-spaces.decorator';
 
