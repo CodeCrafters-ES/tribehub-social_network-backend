@@ -10,6 +10,9 @@
 import path from 'node:path';
 import swc from 'unplugin-swc';
 import { defineConfig } from 'vitest/config';
+import { config } from 'dotenv';
+
+config(); // loads .env into process.env
 
 export default defineConfig({
   test: {
