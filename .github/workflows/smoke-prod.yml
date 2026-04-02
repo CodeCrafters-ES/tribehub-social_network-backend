@@ -1,0 +1,82 @@
+# .github/workflows/smoke-prod.yml
+#
+# Standalone smoke test suite for the TribeHub production environment.
+#
+# Triggers:
+#   - Manually via workflow_dispatch (on-demand production verification)
+#
+# Required GitHub Secrets (Settings → Secrets → Actions):
+#   PROD_SMOKE_USER  — email of the dedicated production smoke-test Supabase user
+#   PROD_SMOKE_PASS  — password of the dedicated production smoke-test Supabase user
+#
+# SMOKE_BASE_URL defaults to https://tribehub.app when not overridden via the
+# workflow_dispatch input. Never reuse staging credentials (SMOKE_USER_EMAIL /
+# SMOKE_USER_PASSWORD) here — production uses its own dedicated account.
+#
+# The job fails fast if any smoke test fails, and logs the failing endpoint
+# and HTTP status via Vitest's output.
+
+name: Smoke Tests — Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Override SMOKE_BASE_URL (leave blank to use https://tribehub.app)'
+        required: false
+        default: ''
+
+jobs:
+  smoke:
+    name: Run smoke tests against production
+    runs-on: ubuntu-latest
+    # Requires manual approval from the `production` environment before running,
+    # preventing accidental execution against production without authorization.
+    environment: production
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '9'
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run production smoke tests
+        env:
+          SMOKE_BASE_URL: ${{ inputs.base_url != '' && inputs.base_url || 'https://tribehub.app' }}
+          PROD_SMOKE_USER: ${{ secrets.PROD_SMOKE_USER }}
+          PROD_SMOKE_PASS: ${{ secrets.PROD_SMOKE_PASS }}
+        run: pnpm test:smoke:prod
+
+      - name: Report failure summary
+        if: failure()
+        run: |
+          echo "::error::One or more production smoke tests failed."
+          echo "::error::Check the Vitest output above for the failing endpoint and HTTP status."
+          echo "::error::Use the X-Request-Id values logged to correlate with backend logs."
+          echo "::error::Consider rolling back if the failure indicates a regression."

@@ -25,6 +25,7 @@
     "test:unit": "vitest run --config vitest.unit.config.ts",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:smoke": "vitest run --config vitest.smoke.config.ts",
+    "test:smoke:prod": "vitest run --config vitest.smoke.config.ts test/smoke/prod.smoke.test.ts",
     "lint:api": "spectral lint docs/openapi/openapi.yaml --display-only-failures"
   },
   "dependencies": {

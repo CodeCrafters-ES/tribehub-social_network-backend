@@ -1,20 +1,21 @@
-// test/smoke/staging.smoke.test.ts
+// test/smoke/prod.smoke.test.ts
 //
-// Smoke test suite for the TribeHub staging environment.
+// Smoke test suite for the TribeHub production environment.
 //
-// Purpose: detect critical failures immediately after a staging deploy before
-// any manual QA or promotion to production.
+// Purpose: detect critical failures immediately after a production deploy.
+// Mirrors the staging smoke suite but uses dedicated production credentials
+// that are kept strictly separate from staging credentials.
 //
 // Runner: Vitest (see vitest.smoke.config.ts)
 // HTTP client: native Node 20 fetch (no extra dependencies)
 //
 // Required env vars:
-//   SMOKE_BASE_URL       — default: https://staging.tribehub.app
-//   SMOKE_USER_EMAIL     — smoke test user email (from GitHub secrets)
-//   SMOKE_USER_PASSWORD  — smoke test user password (from GitHub secrets)
+//   SMOKE_BASE_URL   — default: https://tribehub.app
+//   PROD_SMOKE_USER  — prod smoke-test user email (from GitHub secrets)
+//   PROD_SMOKE_PASS  — prod smoke-test user password (from GitHub secrets)
 //
 // Run:
-//   pnpm test:smoke
+//   pnpm test:smoke:prod
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { loadSmokeConfig, type SmokeConfig } from './smoke.config';
@@ -85,16 +86,17 @@ async function smokeRequest(
 // Suite
 // ---------------------------------------------------------------------------
 
-describe('TribeHub Staging Smoke Tests', () => {
+describe('TribeHub Production Smoke Tests', () => {
   let config: SmokeConfig;
   let sessionToken: string | null = null;
 
   // Load config once; fail the entire suite early if env vars are missing.
+  // Production uses PROD_SMOKE_USER / PROD_SMOKE_PASS — never the staging vars.
   beforeAll(() => {
     config = loadSmokeConfig({
-      defaultBaseUrl: 'https://staging.tribehub.app',
-      emailEnvVar: 'SMOKE_USER_EMAIL',
-      passwordEnvVar: 'SMOKE_USER_PASSWORD',
+      defaultBaseUrl: 'https://tribehub.app',
+      emailEnvVar: 'PROD_SMOKE_USER',
+      passwordEnvVar: 'PROD_SMOKE_PASS',
     });
     console.log(`[smoke] Target: ${config.baseUrl}`);
   });
@@ -144,7 +146,7 @@ describe('TribeHub Staging Smoke Tests', () => {
     expect(
       status,
       `POST /auth/login returned ${status} — login failed; ` +
-        'check SMOKE_USER_EMAIL/SMOKE_USER_PASSWORD secrets and Supabase Auth',
+        'check PROD_SMOKE_USER/PROD_SMOKE_PASS secrets and Supabase Auth',
     ).toSatisfy((s: number) => s === 200 || s === 201);
 
     // The auth service returns { success: true, data: { access_token: '...' } }
@@ -176,7 +178,7 @@ describe('TribeHub Staging Smoke Tests', () => {
   // UsersModule is not yet implemented (Hito 1 pending). Use POST /auth/logout
   // as a lightweight authenticated probe: it requires a valid Bearer token and
   // exercises the SupabaseAuthGuard + Supabase session validation chain.
-  it('POST /auth/logout → 200/201 with valid session token (auth guard works)', async () => {
+  it('POST /auth/logout → 200/201/204 with valid session token (auth guard works)', async () => {
     if (!sessionToken) {
       console.warn(
         '[smoke] Skipping authenticated endpoint test — no session token ' +
