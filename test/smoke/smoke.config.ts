@@ -53,9 +53,10 @@ export function loadSmokeConfig(options: SmokeConfigOptions = {}): SmokeConfig {
     passwordEnvVar = 'SMOKE_USER_PASSWORD',
   } = options;
 
-  const baseUrl = (
-    process.env['SMOKE_BASE_URL'] ?? defaultBaseUrl
-  ).replace(/\/$/, ''); // strip trailing slash
+  const baseUrl = (process.env['SMOKE_BASE_URL'] ?? defaultBaseUrl).replace(
+    /\/$/,
+    '',
+  ); // strip trailing slash
 
   // Credentials are required — no default so CI fails loudly when not set.
   const userEmail = requireEnv(emailEnvVar);
