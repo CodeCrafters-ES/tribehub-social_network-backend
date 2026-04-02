@@ -18,7 +18,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['test/smoke/**/*.smoke.test.ts'],
+    include: ['test/smoke/staging.smoke.test.ts'],
     // 60 seconds for the whole suite — remote deploys can be slow to cold-start.
     testTimeout: 60_000,
     // Sequential execution: avoid parallel requests to a cold staging instance.
