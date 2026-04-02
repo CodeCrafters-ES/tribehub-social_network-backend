@@ -178,6 +178,32 @@ model Reaction {
 }
 
 // =============================================================================
+// SYSTEM CONFIG — Feature flags and runtime configuration
+//
+// Key naming convention:
+//   feature.<domain>.<flag>  — feature toggles (e.g. feature.feed.enabled)
+//   config.<domain>.<param>  — configuration parameters
+//
+// Value types:
+//   Boolean flags: JSON boolean  (e.g. true / false)
+//   String params: JSON string   (e.g. "en")
+//   Numeric params: JSON number  (e.g. 100)
+//   Structured data: JSON object (e.g. {"max": 50})
+// =============================================================================
+
+model SystemConfig {
+  id        String   @id @default(uuid())
+  key       String   @unique // Unique flag name — e.g. "feature.feed.enabled"
+  value     Json     // Native JSON column; use valueType to know how to cast
+  valueType String?  // Optional hint: "boolean" | "string" | "number" | "json"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+  @@map("system_configs")
+}
+
+// =============================================================================
 // ENUMS
 // =============================================================================
 
