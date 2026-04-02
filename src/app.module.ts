@@ -10,6 +10,8 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { MetricsModule } from './observability/metrics/metrics.module';
 import { HttpMetricsInterceptor } from './observability/http-metrics.interceptor';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
+import { FeedModule } from './modules/feed/feed.module';
+import { SearchModule } from './modules/search/search.module';
 
 @Module({
   imports: [
@@ -27,6 +29,8 @@ import { SystemConfigModule } from './modules/system-config/system-config.module
     AuthModule,
     MetricsModule,
     SystemConfigModule,
+    FeedModule,
+    SearchModule,
   ],
   controllers: [AppController],
   providers: [
