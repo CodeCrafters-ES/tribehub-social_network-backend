@@ -99,11 +99,7 @@ describe('TribeHub Staging Smoke Tests', () => {
   // HealthModule is not yet implemented (Hito 1 pending). Use GET / as a
   // basic reachability probe until /health exists.
   it('GET / → backend is reachable', async () => {
-    const { status, body, requestId } = await smokeRequest(
-      config,
-      'GET',
-      '/',
-    );
+    const { status, body, requestId } = await smokeRequest(config, 'GET', '/');
 
     if (status >= 500) {
       const requestIdLabel = requestId ? ` [X-Request-Id: ${requestId}]` : '';
