@@ -95,32 +95,40 @@ describe('TribeHub Staging Smoke Tests', () => {
     console.log(`[smoke] Target: ${config.baseUrl}`);
   });
 
-  // ── 1. Root reachability check ───────────────────────────────────────────
-  // HealthModule is not yet implemented (Hito 1 pending). Use GET / as a
-  // basic reachability probe until /health exists.
-  it('GET / → backend is reachable', async () => {
-    const { status, body, requestId } = await smokeRequest(config, 'GET', '/');
+  // ── 1. Health check ──────────────────────────────────────────────────────
+  it('GET /api/v1/health → 200 and status ok', async () => {
+    const { status, body, requestId } = await smokeRequest(
+      config,
+      'GET',
+      '/api/v1/health',
+    );
 
     if (status >= 500) {
       const requestIdLabel = requestId ? ` [X-Request-Id: ${requestId}]` : '';
       console.error(
-        `[smoke] FAIL GET / — unexpected server error ${status}${requestIdLabel}`,
+        `[smoke] FAIL GET /api/v1/health — unexpected server error ${status}${requestIdLabel}`,
         body,
       );
     }
 
     expect(
       status,
-      `GET / returned ${status} — backend is unreachable or crashing`,
-    ).toBeLessThan(500);
+      `GET /api/v1/health returned ${status} — backend is unreachable or crashing`,
+    ).toBe(200);
+
+    const responseBody = body as Record<string, unknown>;
+    expect(
+      responseBody['status'],
+      'Health response must have status: "ok"',
+    ).toBe('ok');
   });
 
   // ── 2. Auth login ────────────────────────────────────────────────────────
-  it('POST /auth/login → 200/201 and returns a session token', async () => {
+  it('POST /api/v1/auth/login → 200/201 and returns a session token', async () => {
     const { status, body, requestId } = await smokeRequest(
       config,
       'POST',
-      '/auth/login',
+      '/api/v1/auth/login',
       {
         body: {
           email: config.userEmail,
@@ -132,14 +140,14 @@ describe('TribeHub Staging Smoke Tests', () => {
     if (status !== 200 && status !== 201) {
       const requestIdLabel = requestId ? ` [X-Request-Id: ${requestId}]` : '';
       console.error(
-        `[smoke] FAIL POST /auth/login — expected 200 or 201, got ${status}${requestIdLabel}`,
+        `[smoke] FAIL POST /api/v1/auth/login — expected 200 or 201, got ${status}${requestIdLabel}`,
         body,
       );
     }
 
     expect(
       status,
-      `POST /auth/login returned ${status} — login failed; ` +
+      `POST /api/v1/auth/login returned ${status} — login failed; ` +
         'check SMOKE_USER_EMAIL/SMOKE_USER_PASSWORD secrets and Supabase Auth',
     ).toSatisfy((s: number) => s === 200 || s === 201);
 
@@ -172,7 +180,7 @@ describe('TribeHub Staging Smoke Tests', () => {
   // UsersModule is not yet implemented (Hito 1 pending). Use POST /auth/logout
   // as a lightweight authenticated probe: it requires a valid Bearer token and
   // exercises the SupabaseAuthGuard + Supabase session validation chain.
-  it('POST /auth/logout → 200/201 with valid session token (auth guard works)', async () => {
+  it('POST /api/v1/auth/logout → 200/201 with valid session token (auth guard works)', async () => {
     if (!sessionToken) {
       console.warn(
         '[smoke] Skipping authenticated endpoint test — no session token ' +
@@ -184,21 +192,21 @@ describe('TribeHub Staging Smoke Tests', () => {
     const { status, body, requestId } = await smokeRequest(
       config,
       'POST',
-      '/auth/logout',
+      '/api/v1/auth/logout',
       { token: sessionToken },
     );
 
     if (status !== 200 && status !== 201 && status !== 204) {
       const requestIdLabel = requestId ? ` [X-Request-Id: ${requestId}]` : '';
       console.error(
-        `[smoke] FAIL POST /auth/logout — expected 200, 201 or 204, got ${status}${requestIdLabel}`,
+        `[smoke] FAIL POST /api/v1/auth/logout — expected 200, 201 or 204, got ${status}${requestIdLabel}`,
         body,
       );
     }
 
     expect(
       status,
-      `POST /auth/logout returned ${status} — auth guard or Supabase session may be broken`,
+      `POST /api/v1/auth/logout returned ${status} — auth guard or Supabase session may be broken`,
     ).toSatisfy((s: number) => s === 200 || s === 201 || s === 204);
   });
 });

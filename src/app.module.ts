@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -24,6 +25,7 @@ import { HttpMetricsInterceptor } from './observability/http-metrics.interceptor
     }),
     PrismaModule, // Global: PrismaService queda disponible en toda la app
     AuthModule,
+    HealthModule,
     MetricsModule,
   ],
   controllers: [AppController],
