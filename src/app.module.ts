@@ -13,6 +13,7 @@ import { HttpMetricsInterceptor } from './observability/http-metrics.interceptor
 import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { FeedModule } from './modules/feed/feed.module';
 import { SearchModule } from './modules/search/search.module';
+import { QueuesModule } from './queues/queues.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { SearchModule } from './modules/search/search.module';
     SystemConfigModule,
     FeedModule,
     SearchModule,
+    QueuesModule,
   ],
   controllers: [AppController],
   providers: [
