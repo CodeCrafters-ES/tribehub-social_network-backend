@@ -17,6 +17,7 @@ import {
   AuthRepository,
   type RefreshTokenRecord,
 } from './repositories/auth.repository';
+import { SecurityMonitorService } from '../observability/alerts/security-monitor.service';
 
 @Injectable()
 export class AuthService {
@@ -25,6 +26,7 @@ export class AuthService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly authRepository: AuthRepository,
+    private readonly securityMonitor: SecurityMonitorService,
   ) {}
 
   async register(data: RegisterDto) {
@@ -99,6 +101,7 @@ export class AuthService {
       password,
     });
     if (error) {
+      this.securityMonitor.recordFailedLogin();
       throw new Error(error.message);
     }
     return signInData;

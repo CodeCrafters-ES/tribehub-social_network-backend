@@ -8,7 +8,7 @@ import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
-import { MetricsModule } from './observability/metrics/metrics.module';
+import { ObservabilityModule } from './observability/observability.module';
 import { SentryExceptionFilter } from './common/filters/sentry-exception.filter';
 import { HttpMetricsInterceptor } from './observability/http-metrics.interceptor';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
@@ -32,7 +32,7 @@ import { BullboardModule } from './admin/queues/bullboard.module';
     PrismaModule, // Global: PrismaService queda disponible en toda la app
     AuthModule,
     HealthModule,
-    MetricsModule,
+    ObservabilityModule,
     SystemConfigModule,
     FeedModule,
     SearchModule,

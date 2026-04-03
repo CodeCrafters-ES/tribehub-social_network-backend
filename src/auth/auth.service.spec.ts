@@ -31,10 +31,16 @@ const mockAuthRepository = {
   revokeRefreshToken: vi.fn(),
 };
 
+const mockSecurityMonitor = {
+  recordFailedLogin: vi.fn(),
+  recordInvalidToken: vi.fn(),
+};
+
 function buildService(): AuthService {
   return new AuthService(
     mockUsersRepository as never,
     mockAuthRepository as never,
+    mockSecurityMonitor as never,
   );
 }
 
