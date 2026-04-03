@@ -35,6 +35,8 @@
     "@nestjs/platform-express": "^11.0.1",
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.6.0",
+    "@sentry/nestjs": "^10.47.0",
+    "@sentry/profiling-node": "^10.47.0",
     "@supabase/supabase-js": "^2.56.1",
     "argon2": "^0.44.0",
     "class-transformer": "^0.5.1",
