@@ -29,6 +29,8 @@
     "lint:api": "spectral lint docs/openapi/openapi.yaml --display-only-failures"
   },
   "dependencies": {
+    "@bull-board/api": "^6.20.6",
+    "@bull-board/express": "^6.20.6",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
