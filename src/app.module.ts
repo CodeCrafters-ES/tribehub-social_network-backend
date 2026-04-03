@@ -14,6 +14,7 @@ import { SystemConfigModule } from './modules/system-config/system-config.module
 import { FeedModule } from './modules/feed/feed.module';
 import { SearchModule } from './modules/search/search.module';
 import { QueuesModule } from './queues/queues.module';
+import { BullboardModule } from './admin/queues/bullboard.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { QueuesModule } from './queues/queues.module';
     FeedModule,
     SearchModule,
     QueuesModule,
+    BullboardModule,
   ],
   controllers: [AppController],
   providers: [
