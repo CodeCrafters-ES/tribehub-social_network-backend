@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-export type AlertSeverity = 'critical' | 'ops';
+export type AlertSeverity = 'critical' | 'ops' | 'security';
 
 export interface AlertPayload {
   queueName: string;
@@ -26,6 +26,7 @@ interface DiscordWebhookBody {
 const EMBED_COLOR: Record<AlertSeverity, number> = {
   critical: 0xff0000,
   ops: 0xff9900,
+  security: 0x2c3e50,
 };
 
 @Injectable()
