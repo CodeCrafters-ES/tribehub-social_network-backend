@@ -9,9 +9,16 @@
 import { Module } from '@nestjs/common';
 import { QueueService } from './queue.service';
 import { DefaultWorker } from './workers/default.worker';
+import { DiscordAlertService } from './alerts/discord-alert.service';
+import { QueueMonitorService } from './alerts/queue-monitor.service';
 
 @Module({
-  providers: [QueueService, DefaultWorker],
+  providers: [
+    QueueService,
+    DefaultWorker,
+    DiscordAlertService,
+    QueueMonitorService,
+  ],
   exports: [QueueService],
 })
 export class QueuesModule {}
