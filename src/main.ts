@@ -124,6 +124,13 @@ async function bootstrap() {
     bullboardAdapter.getRouter(),
   );
 
+  // Enable graceful shutdown so that NestJS calls onModuleDestroy() on every
+  // provider when the process receives SIGTERM or SIGINT. Without this, BullMQ
+  // workers, IORedis connections (AppMonitorService, SystemConfigService,
+  // QueueMonitorService), and the Prisma pool are never closed — the event loop
+  // stays alive and V8 cannot reclaim the associated heap memory.
+  app.enableShutdownHooks();
+
   const port = process.env.PORT ?? 3000;
   await app.listen(port, '0.0.0.0');
   console.log(`🚀 Backend running on http://localhost:${port}`);
