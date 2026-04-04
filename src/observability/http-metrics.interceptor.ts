@@ -38,10 +38,12 @@ export class HttpMetricsInterceptor implements NestInterceptor {
 
     // Prefer the matched route pattern (e.g. /users/:id) when available so
     // that dynamic segments are already normalised by Express/NestJS routing.
-    // Fall back to the raw URL only when the matched route is unavailable.
+    // Fall back to 'unknown' when the matched route is unavailable to avoid
+    // high-cardinality label values from raw req.path (e.g. UUIDs in URLs
+    // that have not yet been matched by a route handler).
     // The cast is needed because Express types `route` as `any`.
     const routeRecord = req.route as { path?: string } | undefined;
-    const rawRoute: string = routeRecord?.path ?? req.path;
+    const rawRoute: string = routeRecord?.path ?? 'unknown';
     const route = this.metricsService.normaliseRoute(rawRoute);
 
     return next.handle().pipe(

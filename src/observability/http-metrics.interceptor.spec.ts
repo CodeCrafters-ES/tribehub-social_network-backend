@@ -66,6 +66,7 @@ describe('HttpMetricsInterceptor', () => {
     const context = buildMockHttpContext({
       method: 'GET',
       path: '/api/v1/health',
+      routePath: '/api/v1/health',
       statusCode: 200,
     });
 
@@ -88,6 +89,7 @@ describe('HttpMetricsInterceptor', () => {
     const context = buildMockHttpContext({
       method: 'POST',
       path: '/api/v1/auth/login',
+      routePath: '/api/v1/auth/login',
       statusCode: 200,
     });
 
@@ -109,6 +111,7 @@ describe('HttpMetricsInterceptor', () => {
     const context = buildMockHttpContext({
       method: 'GET',
       path: '/api/v1/users',
+      routePath: '/api/v1/users',
     });
 
     const error = Object.assign(new Error('Unauthorized'), { status: 401 });
