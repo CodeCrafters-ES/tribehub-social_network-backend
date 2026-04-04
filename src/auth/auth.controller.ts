@@ -7,22 +7,40 @@ import {
   HttpStatus,
   Post,
   BadRequestException,
+  HttpException,
   Req,
   Res,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterRequestDto } from './dto/register.request.dto';
+import { RegisterResponseDto } from './dto/register.response.dto';
 import { LoginDto } from './dto/login.dto';
 import {
   clearAuthCookies,
   REFRESH_TOKEN_COOKIE,
 } from '../common/utils/cookies';
 
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @ApiOperation({ summary: 'Register a new user' })
+  @ApiResponse({
+    status: 201,
+    description: 'User registered successfully',
+    type: RegisterResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error — missing or malformed fields',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflict — email or username already in use',
+  })
   @Post('register')
   async register(@Body() dto: RegisterRequestDto) {
     try {
@@ -33,6 +51,9 @@ export class AuthController {
         message: 'User registered successfully',
       };
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       const message = error instanceof Error ? error.message : 'Unknown error';
       throw new BadRequestException({
         code: 'REGISTER_ERROR',

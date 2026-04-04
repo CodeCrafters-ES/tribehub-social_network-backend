@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
 import * as cookieParser from 'cookie-parser';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -70,6 +71,16 @@ async function bootstrap() {
     exposedHeaders: ['Authorization'], // Exponer headers para el frontend
     maxAge: 86400, // Cache preflight por 24 horas
   });
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('TribeHub API')
+    .setDescription('TribeHub social network REST API')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, document);
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port, '0.0.0.0');
