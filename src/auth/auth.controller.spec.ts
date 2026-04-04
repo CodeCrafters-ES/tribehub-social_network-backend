@@ -4,7 +4,8 @@ import { vi, type Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { RegisterDto } from './dto/register.dto';
+import { BadRequestException } from '@nestjs/common';
+import { RegisterRequestDto } from './dto/register.request.dto';
 import { LoginDto } from './dto/login.dto';
 
 describe('AuthController', () => {
@@ -31,7 +32,7 @@ describe('AuthController', () => {
   });
 
   it('should register a user', async () => {
-    const dto: RegisterDto = {
+    const dto: RegisterRequestDto = {
       email: 'test@gmail.com',
       username: 'testuser',
       password: 'password123',
@@ -44,15 +45,15 @@ describe('AuthController', () => {
   });
 
   it('should handle register error', async () => {
-    const dto: RegisterDto = {
+    const dto: RegisterRequestDto = {
       email: 'fail@example.com',
       username: 'failuser',
       password: 'password123',
     };
     (service.register as Mock).mockRejectedValue(new Error('Register failed'));
 
-    await expect(controller.register(dto)).rejects.toThrowError(
-      'Register failed',
+    await expect(controller.register(dto)).rejects.toBeInstanceOf(
+      BadRequestException,
     );
   });
 

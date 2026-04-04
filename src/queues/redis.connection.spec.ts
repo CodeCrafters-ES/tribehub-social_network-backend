@@ -1,6 +1,7 @@
 // src/queues/redis.connection.spec.ts
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import type { RedisOptions } from 'bullmq';
 import { getRedisConnection } from './redis.connection';
 
 describe('getRedisConnection', () => {
@@ -16,34 +17,34 @@ describe('getRedisConnection', () => {
 
   it('returns localhost:6379 when REDIS_URL is not set', () => {
     delete process.env.REDIS_URL;
-    const conn = getRedisConnection();
+    const conn = getRedisConnection() as RedisOptions;
     expect(conn.host).toBe('localhost');
     expect(conn.port).toBe(6379);
   });
 
   it('parses host and port from REDIS_URL', () => {
     process.env.REDIS_URL = 'redis://my-redis-host:6380';
-    const conn = getRedisConnection();
+    const conn = getRedisConnection() as RedisOptions;
     expect(conn.host).toBe('my-redis-host');
     expect(conn.port).toBe(6380);
   });
 
   it('includes password when present in REDIS_URL', () => {
     process.env.REDIS_URL = 'redis://:secret@my-redis-host:6379';
-    const conn = getRedisConnection();
+    const conn = getRedisConnection() as RedisOptions;
     expect(conn.password).toBe('secret');
   });
 
   it('does not include password when absent from REDIS_URL', () => {
     process.env.REDIS_URL = 'redis://my-redis-host:6379';
-    const conn = getRedisConnection();
+    const conn = getRedisConnection() as RedisOptions;
     expect(conn.password).toBeUndefined();
   });
 
   it('adds tls option when REDIS_TLS=true', () => {
     process.env.REDIS_URL = 'redis://my-redis-host:6380';
     process.env.REDIS_TLS = 'true';
-    const conn = getRedisConnection();
+    const conn = getRedisConnection() as RedisOptions;
     expect(conn.tls).toBeDefined();
     delete process.env.REDIS_TLS;
   });
@@ -51,13 +52,13 @@ describe('getRedisConnection', () => {
   it('does not add tls option when REDIS_TLS is not set', () => {
     process.env.REDIS_URL = 'redis://my-redis-host:6380';
     delete process.env.REDIS_TLS;
-    const conn = getRedisConnection();
+    const conn = getRedisConnection() as RedisOptions;
     expect(conn.tls).toBeUndefined();
   });
 
   it('sets maxRetriesPerRequest to null', () => {
     process.env.REDIS_URL = 'redis://localhost:6379';
-    const conn = getRedisConnection();
+    const conn = getRedisConnection() as RedisOptions;
     expect(conn.maxRetriesPerRequest).toBeNull();
   });
 });
