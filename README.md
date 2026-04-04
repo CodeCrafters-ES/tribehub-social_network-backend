@@ -1,8 +1,8 @@
 # 🚀 Social Network WebApp - Backend API
 
-## Bienvenido/a al repositorio del proyecto **Social Network** - Backend API
+## Bienvenido/a al repositorio del proyecto **Social Network** (TribeHub) - Backend API
 
-Este proyecto es una API RESTful construida con **NestJS**, **TypeScript** y **Supabase** que proporciona servicios de autenticación y gestión de usuarios para la aplicación de red social.
+Este proyecto es una API RESTful construida con **NestJS**, **TypeScript**, **Prisma** y **Supabase** que proporciona servicios de autenticación y gestión de usuarios para la aplicación de red social.
 
 ---
 
@@ -10,9 +10,8 @@ Este proyecto es una API RESTful construida con **NestJS**, **TypeScript** y **S
 [![NestJS](https://img.shields.io/badge/nestjs-E0234E?style=flat&logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![TypeScript](https://img.shields.io/badge/typescript-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/supabase-3ECF8E?style=flat&logo=supabase&logoColor=white)](https://supabase.com/)
-
-API RESTful moderna construida con **NestJS**, **TypeScript** y **Supabase**.
-Proporciona servicios de autenticación, gestión de usuarios y base para funcionalidades sociales.
+[![Prisma](https://img.shields.io/badge/Prisma-2D3748?style=flat&logo=prisma&logoColor=white)](https://www.prisma.io/)
+[![pnpm](https://img.shields.io/badge/pnpm-F69220?style=flat&logo=pnpm&logoColor=white)](https://pnpm.io/)
 
 ---
 
@@ -23,7 +22,7 @@ Proporciona servicios de autenticación, gestión de usuarios y base para funcio
 - 🛡️ **Guards y middleware** para protección de rutas
 - 🔒 **Validación de datos** con class-validator
 - 📝 **DTOs tipados** para requests y responses
-- 🧪 **Testing completo** con Jest y Supertest
+- 🧪 **Testing completo** con Vitest y Supertest
 
 ---
 
@@ -36,7 +35,7 @@ graph TB
     C --> D[Auth Module]
     C --> E[User Module]
     C --> F[Posts Module]
-    D --> G[Supabase Auth]
+    D --> G[Supabase Auth / Prisma]
     G --> H[(Base de Datos)]
     E --> H
     F --> H
@@ -49,7 +48,7 @@ sequenceDiagram
     participant C as Cliente
     participant A as AuthController
     participant S as AuthService
-    participant U as Supabase
+    participant U as Database / Supabase
 
     C->>A: POST /auth/register
     A->>S: register(userData)
@@ -61,9 +60,25 @@ sequenceDiagram
 
 ---
 
-## 🤝 Contribución
+## 🏗️ **Infraestructura (Docker)**
 
-Para conocer las pautas detalladas de contribución, consulta el archivo [CONTRIBUTING.md](CONTRIBUTING.md).
+Para desarrollo local y persistencia, utilizamos Docker para los servicios de base de datos y cache.
+
+### **Base de Datos (PostgreSQL)**
+Levantar el contenedor en el puerto **5433** para evitar conflictos:
+```bash
+docker run -d --name db-tribehub \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_DB=postgres \
+  -p 5433:5432 \
+  postgres:15-alpine
+```
+
+### **Redis**
+```bash
+docker run -d --name redis-tribehub -p 6379:6379 redis:alpine
+```
 
 ---
 
@@ -71,30 +86,33 @@ Para conocer las pautas detalladas de contribución, consulta el archivo [CONTRI
 
 ### **Requisitos Previos**
 
-- Node.js >= 18.x
-- npm >= 9.x (o pnpm/yarn)
+- Node.js >= 20.x
+- **pnpm** >= 9.x
+- Docker Desktop
 - Una cuenta de Supabase con proyecto configurado
 
 ### **Instalación**
 
 1. **Clona el repositorio**:
-
 ```bash
 git clone https://github.com/CodeCrafters-ES/social-network-webapp-backend.git
 cd social-network-webapp-backend
 ```
 
 2. **Instala dependencias**:
-
+> [!IMPORTANT]
+> El proyecto requiere **pnpm**. No utilices `npm` ni `yarn` para evitar conflictos de versiones en `node_modules`.
 ```bash
-npm install
+pnpm install
 ```
 
 3. **Configura las variables de entorno**:
-
 Crea un archivo `.env` en la raíz del proyecto:
-
 ```env
+# Database Configuration (Docker local porto 5433)
+DATABASE_URL="postgresql://postgres:postgres@localhost:5433/postgres?schema=public"
+REDIS_URL="redis://localhost:6379"
+
 # Supabase Configuration
 SUPABASE_URL=tu_supabase_url
 SUPABASE_ANON_KEY=tu_supabase_anon_key
@@ -108,25 +126,16 @@ PORT=3000
 NODE_ENV=development
 ```
 
-4. **Inicia el servidor de desarrollo**:
-
+4. **Base de Datos (Prisma)**:
 ```bash
-# Desarrollo con auto-reload
-npm run start:dev
-
-# Producción
-npm run start:prod
+pnpm prisma db push
+pnpm prisma generate
 ```
 
-La API estará disponible en `http://localhost:3000`
-
-### **Endpoints principales**
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| POST | `/auth/register` | Registro de nuevos usuarios |
-| POST | `/auth/login` | Inicio de sesión |
-| GET | `/auth/profile` | Obtener perfil del usuario |
+5. **Inicia el servidor**:
+```bash
+pnpm run start:dev
+```
 
 ---
 
@@ -134,16 +143,10 @@ La API estará disponible en `http://localhost:3000`
 
 ```bash
 # Ejecutar todos los tests
-npm run test
+pnpm run test
 
 # Testing con coverage
-npm run test:cov
-
-# Testing en modo watch
-npm run test:watch
-
-# E2E Testing
-npm run test:e2e
+pnpm run test:cov
 ```
 
 ---
@@ -161,7 +164,8 @@ social-network-webapp-backend/
 │   │   └── auth.module.ts
 │   ├── config/              # Configuración de servicios externos
 │   │   └── supabase.config.ts
-│   ├── common/              # Utilidades compartidas
+│   ├── common/              # Utilidades compartidas y Middleware
+│   ├── prisma/              # Prisma Service y Database
 │   ├── modules/             # Módulos de la aplicación
 │   │   ├── users/           # Gestión de usuarios
 │   │   ├── posts/           # Publicaciones
@@ -182,13 +186,10 @@ social-network-webapp-backend/
 
 | Script | Descripción |
 |--------|-------------|
-| `npm run start:dev` | Servidor de desarrollo con auto-reload |
-| `npm run start:prod` | Build y ejecución en producción |
-| `npm run build` | Compilar la aplicación |
-| `npm run test` | Ejecutar tests unitarios |
-| `npm run test:e2e` | Ejecutar tests end-to-end |
-| `npm run lint` | Ejecutar linter |
-| `npm run format` | Formatear código con Prettier |
+| `pnpm run start:dev` | Servidor de desarrollo con watch mode |
+| `pnpm run build` | Compilar la aplicación |
+| `pnpm run test` | Ejecutar tests unitarios |
+| `pnpm prisma studio` | Panel visual para la base de datos |
 
 ---
 
@@ -196,31 +197,25 @@ social-network-webapp-backend/
 
 - **Framework**: NestJS
 - **Lenguaje**: TypeScript
-- **Base de datos**: Supabase (PostgreSQL)
+- **Base de datos**: PostgreSQL (Prisma) / Supabase
+- **Cache**: Redis
 - **Autenticación**: Supabase Auth + JWT
 - **Validación**: class-validator + class-transformer
-- **Testing**: Jest + Supertest
-- **Linter**: ESLint
-- **Formateo**: Prettier
+- **Testing**: Vitest + Supertest
 
 ---
 
-## 📚 **Documentación Adicional**
+## 🛠️ **Troubleshooting**
 
-- [Documentación de NestJS](https://docs.nestjs.com/)
-- [Guía de Supabase](https://supabase.com/docs)
-- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
+### **Error de tipos de 'pg' (TypeScript)**
+Si TypeScript reporta errores en `PrismaService` relacionados con el driver `pg`, es probable que haya contaminación en `node_modules`.
+**Solución**:
+```bash
+rm -r node_modules; rm pnpm-lock.yaml; pnpm install
+```
 
----
-
-## 🆘 **Soporte**
-
-¿Problemas con la configuración?
-
-1. Verifica que todas las variables de entorno estén configuradas correctamente
-2. Asegúrate de que tu proyecto de Supabase esté activo
-3. Revisa los logs del servidor para errores específicos
-4. Consulta la documentación oficial de las tecnologías utilizadas
+### **Error P1001 (Base de datos no encontrada)**
+Asegúrate de que el contenedor de Docker esté corriendo: `docker start db-tribehub`.
 
 ---
 
@@ -228,10 +223,25 @@ social-network-webapp-backend/
 
 Este proyecto es de código abierto bajo licencia [MIT](LICENSE).
 
-© 2025 CodeCrafters - ES
+© 2026 CodeCrafters - ES
 
 ---
 
 ## 🔄 **Estado del Proyecto**
 
-🏗️ **En Desarrollo Activo** - Estamos trabajando en nuevas funcionalidades y mejoras continuas.
+🏗️ **En Desarrollo Activo** - Implementando módulo de Autenticación y limpieza de arquitectura.
+b-tribehub`.
+
+---
+
+## 📜 **Licencia**
+
+Este proyecto es de código abierto bajo licencia [MIT](LICENSE).
+
+© 2026 CodeCrafters - ES
+
+---
+
+## 🔄 **Estado del Proyecto**
+
+🏗️ **En Desarrollo Activo** - Implementando módulo de Autenticación y limpieza de arquitectura.
