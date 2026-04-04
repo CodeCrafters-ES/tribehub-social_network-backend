@@ -4,9 +4,8 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { Queue } from 'bullmq';
 import { QUEUE_NAMES } from '../queues.constants';
-import { getRedisConnection } from '../redis.connection';
+import { QueueService } from '../queue.service';
 import { DiscordAlertService } from './discord-alert.service';
 
 const DEFAULT_INTERVAL_MS = 60_000;
@@ -16,17 +15,17 @@ const DEFAULT_FAILED_THRESHOLD = 20;
 @Injectable()
 export class QueueMonitorService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(QueueMonitorService.name);
-  private readonly queue: Queue;
   private readonly intervalMs: number;
   private readonly waitingThreshold: number;
   private readonly failedThreshold: number;
   private timeoutHandle: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(private readonly discordAlertService: DiscordAlertService) {
-    this.queue = new Queue(QUEUE_NAMES.DEFAULT, {
-      connection: getRedisConnection(),
-    });
-
+  constructor(
+    // Re-use the Queue connection that QueueService already owns instead of
+    // opening a dedicated IORedis socket just for health checks.
+    private readonly queueService: QueueService,
+    private readonly discordAlertService: DiscordAlertService,
+  ) {
     this.intervalMs =
       parseInt(process.env.QUEUE_MONITOR_INTERVAL_MS ?? '', 10) ||
       DEFAULT_INTERVAL_MS;
@@ -44,12 +43,13 @@ export class QueueMonitorService implements OnModuleInit, OnModuleDestroy {
     this.scheduleCheck();
   }
 
-  async onModuleDestroy(): Promise<void> {
+  onModuleDestroy(): void {
     if (this.timeoutHandle !== null) {
       clearTimeout(this.timeoutHandle);
       this.timeoutHandle = null;
     }
-    await this.queue.close();
+    // No Queue to close — QueueService owns the connection and closes it in
+    // its own onModuleDestroy().
   }
 
   private scheduleCheck(): void {
@@ -62,8 +62,8 @@ export class QueueMonitorService implements OnModuleInit, OnModuleDestroy {
 
   async runCheck(): Promise<void> {
     const [waitingCount, failedCount] = await Promise.all([
-      this.queue.getWaitingCount(),
-      this.queue.getFailedCount(),
+      this.queueService.getWaitingCount(),
+      this.queueService.getFailedCount(),
     ]);
 
     this.logger.log({

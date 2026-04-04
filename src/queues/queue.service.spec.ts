@@ -116,7 +116,7 @@ describe('QueueService — queue setup', () => {
       expect.objectContaining({
         defaultJobOptions: expect.objectContaining({
           attempts: 3,
-          removeOnFail: false,
+          removeOnFail: { count: 500 },
         }),
       }),
     );

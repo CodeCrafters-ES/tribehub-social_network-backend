@@ -62,10 +62,27 @@ export class AppMonitorService implements OnModuleInit, OnModuleDestroy {
 
     const redisUrl = process.env.REDIS_URL ?? 'redis://localhost:6379';
     this.redisClient = new Redis(redisUrl, { lazyConnect: true });
-    this.redisClient.on('error', () => {});
+
+    // Log Redis errors so reconnect storms are visible in structured logs
+    // instead of being silently swallowed and accumulating retry timers.
+    this.redisClient.on('error', (err: Error) => {
+      this.logger.warn({
+        event: 'app_monitor.redis_error',
+        message: err.message,
+      });
+    });
   }
 
   onModuleInit(): void {
+    // Explicitly establish the connection so it is ready before the first
+    // health check fires. lazyConnect: true defers the TCP handshake but
+    // does not prevent IORedis from allocating internal buffers — calling
+    // connect() here makes the lifecycle explicit and avoids an implicit
+    // reconnect on the first ping() call inside checkRedisLatency().
+    void this.redisClient.connect().catch(() => {
+      // Non-fatal: if Redis is unavailable the health check will log a warn
+      // and skip the latency alert rather than crashing.
+    });
     this.scheduleCheck();
   }
 

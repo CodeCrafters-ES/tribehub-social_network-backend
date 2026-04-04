@@ -1,35 +1,24 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 
-const mockGetWaitingCount = vi.fn();
-const mockGetFailedCount = vi.fn();
-const mockQueueClose = vi.fn().mockResolvedValue(undefined);
-
-vi.mock('bullmq', () => ({
-  Queue: vi.fn().mockImplementation(() => ({
-    getWaitingCount: mockGetWaitingCount,
-    getFailedCount: mockGetFailedCount,
-    close: mockQueueClose,
-  })),
-}));
-
-vi.mock('../redis.connection', () => ({
-  getRedisConnection: vi.fn().mockReturnValue({}),
-}));
+// Mock BullMQ and redis.connection are no longer needed here because
+// QueueMonitorService delegates to QueueService (injected) instead of
+// owning its own Queue instance.
 
 import { QueueMonitorService } from './queue-monitor.service';
+import { QueueService } from '../queue.service';
 import { DiscordAlertService } from './discord-alert.service';
 
 describe('QueueMonitorService', () => {
   let service: QueueMonitorService;
   let discordAlertService: { sendAlert: ReturnType<typeof vi.fn> };
+  let queueService: {
+    getWaitingCount: ReturnType<typeof vi.fn>;
+    getFailedCount: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     vi.useFakeTimers();
-
-    mockGetWaitingCount.mockReset().mockResolvedValue(0);
-    mockGetFailedCount.mockReset().mockResolvedValue(0);
-    mockQueueClose.mockReset().mockResolvedValue(undefined);
 
     delete process.env.QUEUE_ALERT_WAITING_THRESHOLD;
     delete process.env.QUEUE_ALERT_FAILED_THRESHOLD;
@@ -41,6 +30,13 @@ describe('QueueMonitorService', () => {
       providers: [
         QueueMonitorService,
         {
+          provide: QueueService,
+          useValue: {
+            getWaitingCount: vi.fn().mockResolvedValue(0),
+            getFailedCount: vi.fn().mockResolvedValue(0),
+          },
+        },
+        {
           provide: DiscordAlertService,
           useValue: {
             sendAlert: vi.fn().mockResolvedValue(undefined),
@@ -51,17 +47,18 @@ describe('QueueMonitorService', () => {
 
     service = module.get<QueueMonitorService>(QueueMonitorService);
     discordAlertService = module.get(DiscordAlertService);
+    queueService = module.get(QueueService);
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     vi.useRealTimers();
-    await service.onModuleDestroy();
+    service.onModuleDestroy();
   });
 
   describe('runCheck', () => {
     it('sends critical alert when failedCount exceeds threshold', async () => {
-      mockGetWaitingCount.mockResolvedValue(0);
-      mockGetFailedCount.mockResolvedValue(21);
+      queueService.getWaitingCount.mockResolvedValue(0);
+      queueService.getFailedCount.mockResolvedValue(21);
       process.env.DISCORD_WEBHOOK_CRITICAL =
         'https://discord.com/api/webhooks/critical';
 
@@ -79,8 +76,8 @@ describe('QueueMonitorService', () => {
     });
 
     it('sends ops alert when waitingCount exceeds threshold', async () => {
-      mockGetWaitingCount.mockResolvedValue(51);
-      mockGetFailedCount.mockResolvedValue(0);
+      queueService.getWaitingCount.mockResolvedValue(51);
+      queueService.getFailedCount.mockResolvedValue(0);
       process.env.DISCORD_WEBHOOK_OPS = 'https://discord.com/api/webhooks/ops';
 
       await service.runCheck();
@@ -97,8 +94,8 @@ describe('QueueMonitorService', () => {
     });
 
     it('does not send any alert when both counts are below threshold', async () => {
-      mockGetWaitingCount.mockResolvedValue(10);
-      mockGetFailedCount.mockResolvedValue(5);
+      queueService.getWaitingCount.mockResolvedValue(10);
+      queueService.getFailedCount.mockResolvedValue(5);
 
       await service.runCheck();
 
@@ -106,8 +103,8 @@ describe('QueueMonitorService', () => {
     });
 
     it('does not send ops alert when waitingCount equals threshold (not strictly greater)', async () => {
-      mockGetWaitingCount.mockResolvedValue(50);
-      mockGetFailedCount.mockResolvedValue(0);
+      queueService.getWaitingCount.mockResolvedValue(50);
+      queueService.getFailedCount.mockResolvedValue(0);
 
       await service.runCheck();
 
@@ -115,8 +112,8 @@ describe('QueueMonitorService', () => {
     });
 
     it('does not send critical alert when failedCount equals threshold (not strictly greater)', async () => {
-      mockGetWaitingCount.mockResolvedValue(0);
-      mockGetFailedCount.mockResolvedValue(20);
+      queueService.getWaitingCount.mockResolvedValue(0);
+      queueService.getFailedCount.mockResolvedValue(20);
 
       await service.runCheck();
 
@@ -124,8 +121,8 @@ describe('QueueMonitorService', () => {
     });
 
     it('sends both alerts when both counts exceed their thresholds', async () => {
-      mockGetWaitingCount.mockResolvedValue(100);
-      mockGetFailedCount.mockResolvedValue(30);
+      queueService.getWaitingCount.mockResolvedValue(100);
+      queueService.getFailedCount.mockResolvedValue(30);
       process.env.DISCORD_WEBHOOK_CRITICAL =
         'https://discord.com/api/webhooks/critical';
       process.env.DISCORD_WEBHOOK_OPS = 'https://discord.com/api/webhooks/ops';
@@ -146,6 +143,13 @@ describe('QueueMonitorService', () => {
         providers: [
           QueueMonitorService,
           {
+            provide: QueueService,
+            useValue: {
+              getWaitingCount: vi.fn().mockResolvedValue(11),
+              getFailedCount: vi.fn().mockResolvedValue(0),
+            },
+          },
+          {
             provide: DiscordAlertService,
             useValue: { sendAlert: customSendAlert },
           },
@@ -153,9 +157,6 @@ describe('QueueMonitorService', () => {
       }).compile();
 
       const customService = mod.get<QueueMonitorService>(QueueMonitorService);
-
-      mockGetWaitingCount.mockResolvedValue(11);
-      mockGetFailedCount.mockResolvedValue(0);
 
       await customService.runCheck();
 
@@ -168,7 +169,7 @@ describe('QueueMonitorService', () => {
         }),
       );
 
-      await customService.onModuleDestroy();
+      customService.onModuleDestroy();
       delete process.env.QUEUE_ALERT_WAITING_THRESHOLD;
     });
 
@@ -181,6 +182,13 @@ describe('QueueMonitorService', () => {
         providers: [
           QueueMonitorService,
           {
+            provide: QueueService,
+            useValue: {
+              getWaitingCount: vi.fn().mockResolvedValue(0),
+              getFailedCount: vi.fn().mockResolvedValue(6),
+            },
+          },
+          {
             provide: DiscordAlertService,
             useValue: { sendAlert: customSendAlert },
           },
@@ -188,9 +196,6 @@ describe('QueueMonitorService', () => {
       }).compile();
 
       const customService = mod.get<QueueMonitorService>(QueueMonitorService);
-
-      mockGetWaitingCount.mockResolvedValue(0);
-      mockGetFailedCount.mockResolvedValue(6);
 
       await customService.runCheck();
 
@@ -203,26 +208,27 @@ describe('QueueMonitorService', () => {
         }),
       );
 
-      await customService.onModuleDestroy();
+      customService.onModuleDestroy();
       delete process.env.QUEUE_ALERT_FAILED_THRESHOLD;
     });
   });
 
   describe('onModuleInit / onModuleDestroy', () => {
-    it('cleans up the timeout handle on destroy', async () => {
+    it('cleans up the timeout handle on destroy', () => {
       service.onModuleInit();
 
       const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
 
-      await service.onModuleDestroy();
+      service.onModuleDestroy();
 
       expect(clearTimeoutSpy).toHaveBeenCalled();
       clearTimeoutSpy.mockRestore();
     });
 
-    it('closes the queue on destroy', async () => {
-      await service.onModuleDestroy();
-      expect(mockQueueClose).toHaveBeenCalled();
+    it('does not throw when destroyed before init', () => {
+      // Service was constructed but onModuleInit never called.
+      // onModuleDestroy must be a no-op in that case.
+      expect(() => service.onModuleDestroy()).not.toThrow();
     });
   });
 });
