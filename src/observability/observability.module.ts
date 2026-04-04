@@ -7,6 +7,6 @@ import { DiscordAlertService } from '../queues/alerts/discord-alert.service';
 @Module({
   imports: [MetricsModule],
   providers: [DiscordAlertService, AppMonitorService, SecurityMonitorService],
-  exports: [SecurityMonitorService, MetricsModule],
+  exports: [SecurityMonitorService, MetricsModule, DiscordAlertService],
 })
 export class ObservabilityModule {}

@@ -5,20 +5,20 @@
 // Exports QueueService so any module that needs to enqueue jobs can import
 // QueuesModule and inject QueueService without knowing about the underlying
 // queue infrastructure.
+//
+// DiscordAlertService is provided and exported by ObservabilityModule.
+// Importing ObservabilityModule here makes DiscordAlertService available to
+// QueueMonitorService without registering a duplicate provider instance.
 
 import { Module } from '@nestjs/common';
 import { QueueService } from './queue.service';
 import { DefaultWorker } from './workers/default.worker';
-import { DiscordAlertService } from './alerts/discord-alert.service';
 import { QueueMonitorService } from './alerts/queue-monitor.service';
+import { ObservabilityModule } from '../observability/observability.module';
 
 @Module({
-  providers: [
-    QueueService,
-    DefaultWorker,
-    DiscordAlertService,
-    QueueMonitorService,
-  ],
+  imports: [ObservabilityModule],
+  providers: [QueueService, DefaultWorker, QueueMonitorService],
   exports: [QueueService],
 })
 export class QueuesModule {}

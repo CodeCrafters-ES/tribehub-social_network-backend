@@ -29,7 +29,7 @@ type JobPayload = SendWelcomeEmailPayload | ProcessImagePayload;
 @Injectable()
 export class QueueService implements OnModuleDestroy {
   private readonly logger = new Logger(QueueService.name);
-  private readonly queue: Queue;
+  readonly queue: Queue;
 
   constructor() {
     this.queue = new Queue(QUEUE_NAMES.DEFAULT, {
