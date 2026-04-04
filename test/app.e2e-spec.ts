@@ -6,6 +6,12 @@ import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/prisma/prisma.service';
 
+// Set required env vars before any module is imported/initialized.
+// getRedisConnection() throws at module load time when REDIS_URL is absent.
+// Pointing to localhost is sufficient for the module to boot; a live Redis
+// connection is not required for the health/root endpoint test.
+process.env.REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
+
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
 

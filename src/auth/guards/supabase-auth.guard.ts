@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { verify, type JwtPayload } from 'jsonwebtoken';
+import { SecurityMonitorService } from '../../observability/alerts/security-monitor.service';
 
 const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
 
@@ -18,6 +19,8 @@ type AuthenticatedRequest = Request & {
 
 @Injectable()
 export class SupabaseAuthGuard implements CanActivate {
+  constructor(private readonly securityMonitor: SecurityMonitorService) {}
+
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const authHeader = request.headers['authorization'];
@@ -47,6 +50,7 @@ export class SupabaseAuthGuard implements CanActivate {
       request.supabaseToken = token;
       return true;
     } catch (err) {
+      this.securityMonitor.recordInvalidToken();
       const name = err instanceof Error ? err.name : '';
       if (name === 'TokenExpiredError') {
         throw new UnauthorizedException('Token expired');

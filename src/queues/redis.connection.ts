@@ -1,0 +1,49 @@
+// src/queues/redis.connection.ts
+//
+// Builds the shared IORedis connection options used by BullMQ.
+// Reads REDIS_URL (required). Throws at startup when the variable is absent
+// so that a misconfigured deployment fails fast instead of silently attempting
+// to connect to localhost:6379 and producing ECONNREFUSED in production.
+//
+// TLS is enabled when either:
+//   - the URL scheme is `rediss://` (Railway / Heroku style), or
+//   - the REDIS_TLS environment variable is set to "true".
+//
+// The returned object is passed directly to BullMQ Queue and Worker
+// constructors as the `connection` option.
+
+import { ConnectionOptions } from 'bullmq';
+
+function parseRedisUrl(redisUrl: string): ConnectionOptions {
+  const url = new URL(redisUrl);
+
+  const options: ConnectionOptions = {
+    host: url.hostname,
+    port: url.port ? parseInt(url.port, 10) : 6379,
+    maxRetriesPerRequest: null,
+    enableReadyCheck: false,
+  };
+
+  if (url.password) {
+    options.password = url.password;
+  }
+
+  // Enable TLS when the scheme is `rediss://` (Railway exposes Redis this way)
+  // or when the explicit REDIS_TLS=true override is provided.
+  if (url.protocol === 'rediss:' || process.env.REDIS_TLS === 'true') {
+    options.tls = {};
+  }
+
+  return options;
+}
+
+export function getRedisConnection(): ConnectionOptions {
+  const redisUrl = process.env.REDIS_URL;
+  if (!redisUrl) {
+    throw new Error(
+      'REDIS_URL environment variable is not set. ' +
+        'Configure it in Railway (or your deployment environment) before starting the app.',
+    );
+  }
+  return parseRedisUrl(redisUrl);
+}

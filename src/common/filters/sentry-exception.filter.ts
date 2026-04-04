@@ -1,0 +1,45 @@
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  Logger,
+} from '@nestjs/common';
+import * as Sentry from '@sentry/nestjs';
+import { Request, Response } from 'express';
+
+@Catch()
+export class SentryExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(SentryExceptionFilter.name);
+
+  catch(exception: unknown, host: ArgumentsHost): void {
+    const ctx = host.switchToHttp();
+    const request = ctx.getRequest<Request>();
+    const response = ctx.getResponse<Response>();
+
+    const isHttpException = exception instanceof HttpException;
+    const status = isHttpException ? exception.getStatus() : 500;
+
+    if (!isHttpException || status >= 500) {
+      const requestId = request.requestId ?? 'unknown';
+      Sentry.withScope((scope) => {
+        scope.setContext('request', { requestId });
+        Sentry.captureException(exception);
+      });
+      this.logger.error(
+        `Unhandled exception captured by Sentry — requestId=${requestId}`,
+        exception instanceof Error ? exception.stack : String(exception),
+      );
+    }
+
+    if (isHttpException) {
+      const responseBody = exception.getResponse();
+      response.status(status).json(responseBody);
+    } else {
+      response.status(500).json({
+        statusCode: 500,
+        message: 'Internal server error',
+      });
+    }
+  }
+}
