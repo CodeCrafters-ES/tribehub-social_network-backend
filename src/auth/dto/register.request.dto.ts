@@ -1,8 +1,4 @@
-import {
-  IsEmail,
-  IsNotEmpty,
-  IsStrongPassword
-} from 'class-validator';
+import { IsEmail, IsNotEmpty, IsStrongPassword } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { NoSpaces } from '../../common/decorators/no-spaces.decorator';
 
