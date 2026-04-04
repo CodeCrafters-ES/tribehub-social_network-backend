@@ -5,9 +5,11 @@ import { Registry } from 'prom-client';
 const mockRedisPing = vi.fn();
 const mockRedisDisconnect = vi.fn();
 const mockRedisOn = vi.fn();
+const mockRedisConnect = vi.fn().mockResolvedValue(undefined);
 
 vi.mock('ioredis', () => ({
   default: vi.fn().mockImplementation(() => ({
+    connect: mockRedisConnect,
     ping: mockRedisPing,
     disconnect: mockRedisDisconnect,
     on: mockRedisOn,

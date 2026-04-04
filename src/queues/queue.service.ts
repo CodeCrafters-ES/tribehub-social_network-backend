@@ -6,7 +6,7 @@
 //   - attempts: 3
 //   - backoff: exponential (base 1000 ms)
 //   - removeOnComplete: keep last 100 for debugging
-//   - removeOnFail: false — failed jobs remain visible in BullBoard for inspection
+//   - removeOnFail: keep last 500 for post-mortem inspection via BullBoard
 
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Queue } from 'bullmq';
@@ -41,7 +41,10 @@ export class QueueService implements OnModuleDestroy {
           delay: 1000,
         },
         removeOnComplete: { count: 100 },
-        removeOnFail: false,
+        // Keep only the last 500 failed jobs for post-mortem inspection via
+        // BullBoard. Without a cap, failed jobs accumulate in Redis and in
+        // BullMQ's in-process state indefinitely, growing the Node.js heap.
+        removeOnFail: { count: 500 },
       },
     });
 
@@ -66,6 +69,16 @@ export class QueueService implements OnModuleDestroy {
 
   async enqueueProcessImage(payload: ProcessImagePayload): Promise<string> {
     return this.enqueue(JOB_TYPES.MEDIA_PROCESS_IMAGE, payload);
+  }
+
+  /** Returns the number of jobs currently in the waiting state. */
+  getWaitingCount(): Promise<number> {
+    return this.queue.getWaitingCount();
+  }
+
+  /** Returns the number of jobs that have exhausted all retry attempts. */
+  getFailedCount(): Promise<number> {
+    return this.queue.getFailedCount();
   }
 
   private async enqueue(jobType: string, payload: JobPayload): Promise<string> {
