@@ -28,3 +28,19 @@ describe('Register request dto test suite', () => {
     expect(passwordErrors.length).toBeGreaterThan(0);
   });
 });
+
+describe('Register request dto valid data test suite', () => {
+  let errors: ReturnType<typeof validateSync>;
+
+  beforeAll(() => {
+    const registerRequestDto = new RegisterRequestDto();
+    registerRequestDto.email = 'valid.user@example.com';
+    registerRequestDto.username = 'validuser';
+    registerRequestDto.password = 'SecurePass1!';
+    errors = validateSync(registerRequestDto);
+  });
+
+  it('Should return no errors when all fields are valid', () => {
+    expect(errors.length).toBe(0);
+  });
+});
