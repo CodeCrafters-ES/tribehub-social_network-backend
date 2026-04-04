@@ -1,9 +1,21 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { ObservabilityModule } from './observability/observability.module';
+import { SentryExceptionFilter } from './common/filters/sentry-exception.filter';
+import { HttpMetricsInterceptor } from './observability/http-metrics.interceptor';
+import { SystemConfigModule } from './modules/system-config/system-config.module';
+import { FeedModule } from './modules/feed/feed.module';
+import { SearchModule } from './modules/search/search.module';
+import { QueuesModule } from './queues/queues.module';
+import { BullboardModule } from './admin/queues/bullboard.module';
 
 @Module({
   imports: [
@@ -19,8 +31,33 @@ import { PrismaModule } from './prisma/prisma.module';
     }),
     PrismaModule, // Global: PrismaService queda disponible en toda la app
     AuthModule,
+    HealthModule,
+    ObservabilityModule,
+    SystemConfigModule,
+    FeedModule,
+    SearchModule,
+    QueuesModule,
+    BullboardModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_FILTER,
+      useClass: SentryExceptionFilter,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: HttpMetricsInterceptor,
+    },
+  ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(RequestIdMiddleware).forRoutes('*');
+  }
+}

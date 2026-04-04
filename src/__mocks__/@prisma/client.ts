@@ -11,6 +11,7 @@ export const PrismaClient = class {
   interest = {};
   userInterest = {};
   refreshToken = {};
+  systemConfig = {};
   $connect = () => Promise.resolve();
   $disconnect = () => Promise.resolve();
 };

@@ -1,14 +1,24 @@
+import './instrument';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
 import * as cookieParser from 'cookie-parser';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { Request, Response, NextFunction } from 'express';
+import { verify } from 'jsonwebtoken';
 import { AppModule } from './app.module';
+import {
+  BullboardModule,
+  BULLBOARD_ADAPTER,
+} from './admin/queues/bullboard.module';
+import type { ExpressAdapter } from '@bull-board/express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.use(cookieParser());
+
+  app.setGlobalPrefix('api/v1');
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -68,7 +78,7 @@ async function bootstrap() {
       'Access-Control-Request-Method',
       'Access-Control-Request-Headers',
     ],
-    exposedHeaders: ['Authorization'], // Exponer headers para el frontend
+    exposedHeaders: ['Authorization', 'X-Request-Id'], // Exponer headers para el frontend
     maxAge: 86400, // Cache preflight por 24 horas
   });
 
@@ -81,6 +91,56 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
+
+  const bullboardAdapter = app
+    .select(BullboardModule)
+    .get<ExpressAdapter>(BULLBOARD_ADAPTER);
+
+  const jwtSecret = process.env.SUPABASE_JWT_SECRET;
+
+  app.use(
+    '/admin/queues',
+    (req: Request, res: Response, next: NextFunction) => {
+      const authHeader = req.headers['authorization'];
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        res.status(401).json({ statusCode: 401, message: 'Unauthorized' });
+        return;
+      }
+
+      const token = authHeader.replace('Bearer ', '');
+
+      if (!jwtSecret) {
+        res
+          .status(401)
+          .json({ statusCode: 401, message: 'JWT secret not configured' });
+        return;
+      }
+
+      try {
+        const decoded = verify(token, jwtSecret) as {
+          app_metadata?: { role?: string };
+        };
+
+        if (decoded.app_metadata?.role !== 'admin') {
+          res.status(403).json({ statusCode: 403, message: 'Forbidden' });
+          return;
+        }
+
+        next();
+      } catch {
+        res.status(401).json({ statusCode: 401, message: 'Unauthorized' });
+      }
+    },
+    bullboardAdapter.getRouter(),
+  );
+
+  // Enable graceful shutdown so that NestJS calls onModuleDestroy() on every
+  // provider when the process receives SIGTERM or SIGINT. Without this, BullMQ
+  // workers, IORedis connections (AppMonitorService, SystemConfigService,
+  // QueueMonitorService), and the Prisma pool are never closed — the event loop
+  // stays alive and V8 cannot reclaim the associated heap memory.
+  app.enableShutdownHooks();
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port, '0.0.0.0');

@@ -31,6 +31,9 @@ config({ path: `.env.${process.env.NODE_ENV ?? 'development'}` });
 
 export default defineConfig({
   schema: path.join(__dirname, 'prisma/schema.prisma'),
+  migrations: {
+    seed: 'ts-node prisma/seed.ts',
+  },
   datasource: {
     url: process.env.DATABASE_URL,
   },
