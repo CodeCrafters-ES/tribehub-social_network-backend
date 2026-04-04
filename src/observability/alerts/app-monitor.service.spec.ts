@@ -100,6 +100,9 @@ describe('AppMonitorService', () => {
     delete process.env.APP_MONITOR_INTERVAL_MS;
     delete process.env.DISCORD_WEBHOOK_CRITICAL;
     delete process.env.DISCORD_WEBHOOK_OPS;
+    // Provide a REDIS_URL so the service creates a real (mocked) Redis client
+    // and the latency / disconnect tests exercise the connected code path.
+    process.env.REDIS_URL = 'redis://test-redis-host:6379';
 
     mockRegistry = { getMetricsAsJSON: vi.fn().mockResolvedValue([]) };
     sendAlertMock = vi.fn().mockResolvedValue(undefined);
@@ -126,6 +129,7 @@ describe('AppMonitorService', () => {
   afterEach(() => {
     vi.useRealTimers();
     service.onModuleDestroy();
+    delete process.env.REDIS_URL;
   });
 
   describe('check5xxRate', () => {
@@ -288,6 +292,8 @@ describe('AppMonitorService', () => {
     it('sends ops alert when Redis PING takes longer than threshold', async () => {
       process.env.APP_ALERT_REDIS_LATENCY_MS = '1';
       process.env.DISCORD_WEBHOOK_OPS = 'https://discord.com/api/webhooks/ops';
+      // REDIS_URL must be set so the service creates its IORedis client.
+      process.env.REDIS_URL = 'redis://test-redis-host:6379';
 
       mockRedisPing.mockImplementation(
         () =>
@@ -332,6 +338,34 @@ describe('AppMonitorService', () => {
 
       customService.onModuleDestroy();
       delete process.env.APP_ALERT_REDIS_LATENCY_MS;
+    });
+
+    it('skips Redis latency check when REDIS_URL is not set', async () => {
+      delete process.env.REDIS_URL;
+
+      mockRegistry.getMetricsAsJSON.mockResolvedValue([]);
+
+      const noRedisModule: TestingModule = await Test.createTestingModule({
+        providers: [
+          AppMonitorService,
+          {
+            provide: MetricsService,
+            useValue: { registry: mockRegistry },
+          },
+          {
+            provide: DiscordAlertService,
+            useValue: { sendAlert: vi.fn().mockResolvedValue(undefined) },
+          },
+        ],
+      }).compile();
+
+      const noRedisService =
+        noRedisModule.get<AppMonitorService>(AppMonitorService);
+
+      await expect(noRedisService.runCheck()).resolves.toBeUndefined();
+      expect(mockRedisPing).not.toHaveBeenCalled();
+
+      noRedisService.onModuleDestroy();
     });
 
     it('does not throw when Redis PING fails', async () => {
