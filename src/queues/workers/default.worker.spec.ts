@@ -4,6 +4,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 const mockWorkerOn = vi.fn();
 const mockWorkerClose = vi.fn().mockResolvedValue(undefined);
+const mockWorkerRemoveAllListeners = vi.fn();
 let capturedProcessor: ((job: unknown) => Promise<void>) | null = null;
 
 vi.mock('bullmq', () => ({
@@ -15,6 +16,7 @@ vi.mock('bullmq', () => ({
         return {
           on: mockWorkerOn,
           close: mockWorkerClose,
+          removeAllListeners: mockWorkerRemoveAllListeners,
         };
       },
     ),

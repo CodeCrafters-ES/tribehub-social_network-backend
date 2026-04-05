@@ -90,6 +90,7 @@ export class DefaultWorker implements OnModuleInit, OnModuleDestroy {
 
   async onModuleDestroy(): Promise<void> {
     if (this.worker) {
+      this.worker.removeAllListeners();
       await this.worker.close();
       this.worker = null;
     }

@@ -20,6 +20,7 @@ const { mockRedisInstance } = vi.hoisted(() => {
     del: vi.fn().mockResolvedValue(1),
     scan: vi.fn().mockResolvedValue(['0', []]),
     quit: vi.fn().mockResolvedValue('OK'),
+    removeAllListeners: vi.fn(),
   };
   return { mockRedisInstance };
 });

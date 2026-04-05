@@ -2,19 +2,31 @@
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-const { mockQueueAdd, mockQueueClose, mockQueueOn, mockQueueCtor } = vi.hoisted(
-  () => {
-    const mockQueueAdd = vi.fn();
-    const mockQueueClose = vi.fn().mockResolvedValue(undefined);
-    const mockQueueOn = vi.fn();
-    const mockQueueCtor = vi.fn().mockImplementation(() => ({
-      add: mockQueueAdd,
-      close: mockQueueClose,
-      on: mockQueueOn,
-    }));
-    return { mockQueueAdd, mockQueueClose, mockQueueOn, mockQueueCtor };
-  },
-);
+const {
+  mockQueueAdd,
+  mockQueueClose,
+  mockQueueOn,
+  mockQueueCtor,
+  mockQueueRemoveAllListeners,
+} = vi.hoisted(() => {
+  const mockQueueAdd = vi.fn();
+  const mockQueueClose = vi.fn().mockResolvedValue(undefined);
+  const mockQueueOn = vi.fn();
+  const mockQueueRemoveAllListeners = vi.fn();
+  const mockQueueCtor = vi.fn().mockImplementation(() => ({
+    add: mockQueueAdd,
+    close: mockQueueClose,
+    on: mockQueueOn,
+    removeAllListeners: mockQueueRemoveAllListeners,
+  }));
+  return {
+    mockQueueAdd,
+    mockQueueClose,
+    mockQueueOn,
+    mockQueueCtor,
+    mockQueueRemoveAllListeners,
+  };
+});
 
 vi.mock('bullmq', () => ({
   Queue: mockQueueCtor,
@@ -40,6 +52,7 @@ beforeEach(() => {
     add: mockQueueAdd,
     close: mockQueueClose,
     on: mockQueueOn,
+    removeAllListeners: mockQueueRemoveAllListeners,
   }));
 });
 
