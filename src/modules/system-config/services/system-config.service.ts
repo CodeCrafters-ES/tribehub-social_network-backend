@@ -70,6 +70,7 @@ export class SystemConfigService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleDestroy(): Promise<void> {
     if (this.redisClient) {
+      this.redisClient.removeAllListeners();
       await this.redisClient.quit();
       this.redisClient = null;
     }
@@ -197,6 +198,8 @@ export class SystemConfigService implements OnModuleInit, OnModuleDestroy {
         maxRetriesPerRequest: 1,
         enableReadyCheck: false,
         lazyConnect: true,
+        retryStrategy: (times) =>
+          times > 5 ? null : Math.min(times * 500, 5000),
       });
 
       this.redisClient.on('error', (err: Error) => {
