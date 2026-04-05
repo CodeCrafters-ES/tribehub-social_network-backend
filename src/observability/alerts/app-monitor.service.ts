@@ -64,7 +64,8 @@ export class AppMonitorService implements OnModuleInit, OnModuleDestroy {
     if (redisUrl) {
       this.redisClient = new Redis(redisUrl, {
         lazyConnect: true,
-        retryStrategy: (times) => (times > 5 ? null : Math.min(times * 500, 5000)),
+        retryStrategy: (times) =>
+          times > 5 ? null : Math.min(times * 500, 5000),
       });
 
       // Log Redis errors so reconnect storms are visible in structured logs
