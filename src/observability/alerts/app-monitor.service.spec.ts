@@ -6,6 +6,7 @@ const mockRedisPing = vi.fn();
 const mockRedisDisconnect = vi.fn();
 const mockRedisOn = vi.fn();
 const mockRedisConnect = vi.fn().mockResolvedValue(undefined);
+const mockRedisRemoveAllListeners = vi.fn();
 
 vi.mock('ioredis', () => ({
   default: vi.fn().mockImplementation(() => ({
@@ -13,6 +14,7 @@ vi.mock('ioredis', () => ({
     ping: mockRedisPing,
     disconnect: mockRedisDisconnect,
     on: mockRedisOn,
+    removeAllListeners: mockRedisRemoveAllListeners,
   })),
 }));
 
