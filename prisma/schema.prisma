@@ -45,13 +45,30 @@ model User {
   deletedAt     DateTime?  // null = activo; valor = soft deleted
 
   // Relaciones
-  profile     Profile?
-  interests   UserInterest[]
-  posts       Post[]
-  comments    Comment[]
-  reactions   Reaction[]
+  profile       Profile?
+  interests     UserInterest[]
+  posts         Post[]
+  comments      Comment[]
+  reactions     Reaction[]
+  refreshTokens RefreshToken[]
 
   @@map("users")
+}
+
+model RefreshToken {
+  id               String    @id @default(uuid())
+  userId           String
+  tokenHash        String    @unique // SHA-256 hash del refresh token (nunca texto plano)
+  revokedAt        DateTime? // null = activo; valor = revocado
+  revocationReason String?   // 'logout' | 'rotation' | 'admin'
+  createdAt        DateTime  @default(now())
+  expiresAt        DateTime  // Fecha de expiración del token
+
+  // Relaciones
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
 }
 
 model Profile {
@@ -158,6 +175,32 @@ model Reaction {
   // Un usuario solo puede tener UNA reacción por post (No-Op en duplicados)
   @@unique([postId, userId])
   @@map("reactions")
+}
+
+// =============================================================================
+// SYSTEM CONFIG — Feature flags and runtime configuration
+//
+// Key naming convention:
+//   feature.<domain>.<flag>  — feature toggles (e.g. feature.feed.enabled)
+//   config.<domain>.<param>  — configuration parameters
+//
+// Value types:
+//   Boolean flags: JSON boolean  (e.g. true / false)
+//   String params: JSON string   (e.g. "en")
+//   Numeric params: JSON number  (e.g. 100)
+//   Structured data: JSON object (e.g. {"max": 50})
+// =============================================================================
+
+model SystemConfig {
+  id        String   @id @default(uuid())
+  key       String   @unique // Unique flag name — e.g. "feature.feed.enabled"
+  value     Json     // Native JSON column; use valueType to know how to cast
+  valueType String?  // Optional hint: "boolean" | "string" | "number" | "json"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+  @@map("system_configs")
 }
 
 // =============================================================================

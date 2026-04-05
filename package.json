@@ -23,24 +23,38 @@
     "test": "vitest run --config vitest.unit.config.ts",
     "test:cov": "vitest run --config vitest.unit.config.ts --coverage",
     "test:unit": "vitest run --config vitest.unit.config.ts",
-    "test:integration": "vitest run --config vitest.integration.config.ts"
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:smoke": "vitest run --config vitest.smoke.config.ts",
+    "test:smoke:prod": "vitest run --config vitest.smoke.config.ts test/smoke/prod.smoke.test.ts",
+    "lint:api": "spectral lint docs/openapi/openapi.yaml --display-only-failures"
   },
   "dependencies": {
+    "@bull-board/api": "^6.20.6",
+    "@bull-board/express": "^6.20.6",
+    "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/swagger": "^11.2.6",
     "@prisma/adapter-pg": "^7.5.0",
-    "@prisma/client": "^7.5.0",
+    "@prisma/client": "^7.6.0",
+    "@sentry/nestjs": "^10.47.0",
+    "@sentry/profiling-node": "^10.47.0",
     "@supabase/supabase-js": "^2.56.1",
     "argon2": "^0.44.0",
+    "bullmq": "^5.73.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
+    "cookie-parser": "^1.4.7",
     "dotenv": "^17.3.1",
+    "ioredis": "^5.10.1",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.20.0",
+    "prom-client": "^15.1.3",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -48,9 +62,12 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
+    "@stoplight/spectral-cli": "^6.15.0",
     "@swc/cli": "^0.6.0",
     "@swc/core": "^1.10.7",
+    "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
+    "@types/ioredis": "^5.0.0",
     "@types/node": "^22.10.7",
     "@types/supertest": "^6.0.2",
     "@vitest/coverage-v8": "^2.1.9",
@@ -59,7 +76,7 @@
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^16.0.0",
     "prettier": "^3.4.2",
-    "prisma": "^7.5.0",
+    "prisma": "^7.6.0",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
     "ts-loader": "^9.5.2",
@@ -70,7 +87,13 @@
     "unplugin-swc": "^1.5.9",
     "vitest": "^2.1.9"
   },
+  "prisma": {
+    "seed": "ts-node --project tsconfig.json -e 'require(\"tsconfig-paths/register\")' prisma/seed.ts"
+  },
   "pnpm": {
-    "onlyBuiltDependencies": []
+    "onlyBuiltDependencies": [],
+    "overrides": {
+      "rollup": "4.60.1"
+    }
   }
 }

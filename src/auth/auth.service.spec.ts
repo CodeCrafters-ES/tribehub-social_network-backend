@@ -26,8 +26,22 @@ const mockUsersRepository = {
   create: vi.fn(),
 };
 
+const mockAuthRepository = {
+  findActiveRefreshToken: vi.fn(),
+  revokeRefreshToken: vi.fn(),
+};
+
+const mockSecurityMonitor = {
+  recordFailedLogin: vi.fn(),
+  recordInvalidToken: vi.fn(),
+};
+
 function buildService(): AuthService {
-  return new AuthService(mockUsersRepository as never);
+  return new AuthService(
+    mockUsersRepository as never,
+    mockAuthRepository as never,
+    mockSecurityMonitor as never,
+  );
 }
 
 beforeEach(() => {
@@ -39,6 +53,9 @@ beforeEach(() => {
       signInWithPassword: mockSignInWithPassword,
     },
   } as never);
+
+  mockAuthRepository.findActiveRefreshToken.mockResolvedValue(null);
+  mockAuthRepository.revokeRefreshToken.mockResolvedValue(undefined);
 });
 
 describe('AuthService.register', () => {
@@ -182,5 +199,106 @@ describe('AuthService.login', () => {
     const service = buildService();
 
     await expect(service.login(dto)).rejects.toThrow('Invalid credentials');
+  });
+});
+
+describe('AuthService.logout', () => {
+  it('returns without calling repository when rawToken is undefined', async () => {
+    const service = buildService();
+
+    await expect(service.logout(undefined)).resolves.toBeUndefined();
+
+    expect(mockAuthRepository.findActiveRefreshToken).not.toHaveBeenCalled();
+    expect(mockAuthRepository.revokeRefreshToken).not.toHaveBeenCalled();
+  });
+
+  it('returns without revoking when no active token is found in the DB', async () => {
+    mockAuthRepository.findActiveRefreshToken.mockResolvedValue(null);
+
+    const service = buildService();
+
+    await expect(service.logout('some-raw-token')).resolves.toBeUndefined();
+
+    expect(mockAuthRepository.findActiveRefreshToken).toHaveBeenCalledOnce();
+    expect(mockAuthRepository.revokeRefreshToken).not.toHaveBeenCalled();
+  });
+
+  it('revokes the token with reason "logout" when an active token exists', async () => {
+    const tokenRecord = {
+      id: 'token-uuid',
+      userId: 'user-uuid',
+      tokenHash: 'hashed-value',
+      revokedAt: null,
+      expiresAt: new Date(Date.now() + 3600_000),
+      createdAt: new Date(),
+      revocationReason: null,
+    };
+    mockAuthRepository.findActiveRefreshToken.mockResolvedValue(tokenRecord);
+    mockAuthRepository.revokeRefreshToken.mockResolvedValue(undefined);
+
+    const service = buildService();
+
+    await expect(service.logout('some-raw-token')).resolves.toBeUndefined();
+
+    expect(mockAuthRepository.findActiveRefreshToken).toHaveBeenCalledOnce();
+    // The hash passed to findActiveRefreshToken must be a hex SHA-256 string
+    const passedHash = mockAuthRepository.findActiveRefreshToken.mock
+      .calls[0][0] as string;
+    expect(passedHash).toMatch(/^[0-9a-f]{64}$/);
+
+    expect(mockAuthRepository.revokeRefreshToken).toHaveBeenCalledOnce();
+    expect(mockAuthRepository.revokeRefreshToken).toHaveBeenCalledWith(
+      passedHash,
+      'logout',
+    );
+  });
+
+  it('hashes two different raw tokens to different values', async () => {
+    mockAuthRepository.findActiveRefreshToken.mockResolvedValue(null);
+    const service = buildService();
+
+    await service.logout('token-alpha');
+    await service.logout('token-beta');
+
+    const hashAlpha = mockAuthRepository.findActiveRefreshToken.mock
+      .calls[0][0] as string;
+    const hashBeta = mockAuthRepository.findActiveRefreshToken.mock
+      .calls[1][0] as string;
+
+    expect(hashAlpha).not.toBe(hashBeta);
+  });
+
+  it('resolves without throwing when the DB throws during findActiveRefreshToken', async () => {
+    mockAuthRepository.findActiveRefreshToken.mockRejectedValue(
+      new Error('DB connection lost'),
+    );
+
+    const service = buildService();
+
+    // Must not throw — DB errors are absorbed to keep logout best-effort.
+    await expect(service.logout('some-raw-token')).resolves.toBeUndefined();
+
+    expect(mockAuthRepository.revokeRefreshToken).not.toHaveBeenCalled();
+  });
+
+  it('resolves without throwing when the DB throws during revokeRefreshToken', async () => {
+    const tokenRecord = {
+      id: 'token-uuid',
+      userId: 'user-uuid',
+      tokenHash: 'hashed-value',
+      revokedAt: null,
+      expiresAt: new Date(Date.now() + 3600_000),
+      createdAt: new Date(),
+      revocationReason: null,
+    };
+    mockAuthRepository.findActiveRefreshToken.mockResolvedValue(tokenRecord);
+    mockAuthRepository.revokeRefreshToken.mockRejectedValue(
+      new Error('DB write failed'),
+    );
+
+    const service = buildService();
+
+    // Must not throw — DB errors are absorbed.
+    await expect(service.logout('some-raw-token')).resolves.toBeUndefined();
   });
 });

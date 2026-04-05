@@ -1,44 +1,111 @@
 # deploy-staging.yml
 #
-# Secrets required (configure in GitHub → Settings → Environments → staging):
-#   RAILWAY_TOKEN         — Railway API token with deploy access
-#   RAILWAY_SERVICE_ID    — ID of the Railway service to deploy
+# Automatically promotes `develop` to `staging` whenever a push lands on
+# `develop` (i.e., after every PR merge).  Railway is configured to watch the
+# `staging` branch, so pushing to it is all that is needed to trigger a deploy.
+#
+# What this workflow does:
+#   1. Checks out the full git history (required for merge operations).
+#   2. Merges `develop` into `staging` using --no-ff to produce an explicit
+#      merge commit (preserves traceability in the git log).
+#   3. Pushes `staging` to the remote.  Railway detects the push and deploys.
+#   4. If the merge fails due to conflicts, the workflow exits with a non-zero
+#      status and prints actionable instructions.  Nothing is force-pushed.
+#
+# Token requirements:
+#   By default this workflow uses the automatic GITHUB_TOKEN.  GITHUB_TOKEN can
+#   push to non-protected branches without extra configuration.
+#
+#   IF `staging` is set as a protected branch in GitHub (Settings → Branches →
+#   Branch protection rules), GITHUB_TOKEN will be blocked from pushing even
+#   if "Allow force pushes" is unchecked.  In that case you must:
+#     1. Create a Personal Access Token (PAT) with the `repo` scope (classic) or
+#        the `contents: write` permission (fine-grained), scoped to this repo.
+#     2. Store it as a repository/organization secret named DEPLOY_PAT.
+#     3. Change the `token` field in the "Checkout repository" step below from
+#        `${{ secrets.GITHUB_TOKEN }}` to `${{ secrets.DEPLOY_PAT }}`.
+#   A GitHub App token (`gh-app-token` action) is a more secure alternative to
+#   a long-lived PAT and is recommended for team/org repos.
+#
+# Conflict resolution:
+#   If this job fails with "Automatic merge failed", a developer must resolve
+#   conflicts locally:
+#     git fetch origin
+#     git checkout staging
+#     git merge origin/develop
+#     # resolve conflicts, then:
+#     git push origin staging
 #
 # Promotion to production:
-#   Merge the same commit to `main`. The deploy-production workflow will run
-#   on that SHA automatically, ensuring bit-for-bit promotion.
-#
-# Rollback:
-#   Use `workflow_dispatch` on deploy-production.yml selecting the previous
-#   stable SHA, or revert the merge commit on `develop` and let this workflow
-#   run again.
+#   After staging is validated, merge `staging` (or `develop`) into `main`.
+#   The deploy-production workflow fires automatically on push to `main`.
 
 name: Deploy — Staging
 
 on:
   push:
     branches: [develop]
+  # Allow manual re-trigger (e.g. after resolving a conflict externally).
+  workflow_dispatch:
 
 jobs:
-  deploy-staging:
-    name: Deploy to Staging
+  promote-to-staging:
+    name: Merge develop → staging
     runs-on: ubuntu-latest
     environment: staging
 
+    permissions:
+      contents: write  # Required to push the merged staging branch.
+
     steps:
-      - name: Checkout repository
+      - name: Checkout repository (full history)
         uses: actions/checkout@v4
+        with:
+          # A full clone is required so that `git merge` has the complete
+          # history of both branches available.
+          fetch-depth: 0
+          # Remove this token override and use DEPLOY_PAT (see header comment)
+          # if `staging` is a protected branch.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Traceability log
         run: |
-          echo "Deploying SHA ${{ github.sha }} to staging at $(date -u)"
+          echo "Promoting develop → staging"
+          echo "Source SHA : ${{ github.sha }}"
           echo "Triggered by: ${{ github.actor }}"
-          echo "Ref: ${{ github.ref }}"
+          echo "Timestamp  : $(date -u)"
 
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
+      - name: Fetch remote branches
+        run: git fetch origin develop staging
 
-      - name: Deploy to Railway (staging)
-        run: railway up --service ${{ secrets.RAILWAY_SERVICE_ID }} --detach
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      - name: Checkout staging branch
+        run: git checkout staging
+
+      - name: Merge develop into staging (no fast-forward)
+        # --no-ff always creates a merge commit, which keeps the promotion
+        # visible in the git log and makes rollbacks easier to identify.
+        # The merge exits non-zero on conflicts; we catch that below.
+        run: |
+          if ! git merge --no-ff origin/develop \
+               -m "chore: promote develop → staging [$(date -u +'%Y-%m-%dT%H:%M:%SZ')]"; then
+            echo ""
+            echo "::error::Automatic merge of develop into staging failed due to conflicts."
+            echo "::error::Resolve conflicts locally then push staging manually:"
+            echo "::error::  git fetch origin"
+            echo "::error::  git checkout staging"
+            echo "::error::  git merge origin/develop"
+            echo "::error::  # resolve conflicts, commit, then:"
+            echo "::error::  git push origin staging"
+            git merge --abort
+            exit 1
+          fi
+
+      - name: Push staging to remote
+        # Railway listens to this push and triggers its own deploy pipeline.
+        # Nothing else needs to happen here; Railway handles the rest.
+        run: git push origin staging
