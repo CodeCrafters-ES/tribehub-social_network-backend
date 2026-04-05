@@ -58,6 +58,7 @@ export class QueueService implements OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
+    this.queue.removeAllListeners();
     await this.queue.close();
   }
 
