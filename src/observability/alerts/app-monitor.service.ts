@@ -62,7 +62,10 @@ export class AppMonitorService implements OnModuleInit, OnModuleDestroy {
 
     const redisUrl = process.env.REDIS_URL;
     if (redisUrl) {
-      this.redisClient = new Redis(redisUrl, { lazyConnect: true });
+      this.redisClient = new Redis(redisUrl, {
+        lazyConnect: true,
+        retryStrategy: (times) => (times > 5 ? null : Math.min(times * 500, 5000)),
+      });
 
       // Log Redis errors so reconnect storms are visible in structured logs
       // instead of being silently swallowed and accumulating retry timers.
@@ -101,6 +104,7 @@ export class AppMonitorService implements OnModuleInit, OnModuleDestroy {
       this.timeoutHandle = null;
     }
     if (this.redisClient) {
+      this.redisClient.removeAllListeners();
       this.redisClient.disconnect();
     }
   }
