@@ -12,13 +12,13 @@
 // The returned object is passed directly to BullMQ Queue and Worker
 // constructors as the `connection` option.
 
-import { ConnectionOptions } from 'bullmq';
+import type { RedisOptions } from 'ioredis';
 import Redis from 'ioredis';
 
-function parseRedisUrl(redisUrl: string): ConnectionOptions {
+function parseRedisUrl(redisUrl: string): RedisOptions {
   const url = new URL(redisUrl);
 
-  const options: ConnectionOptions = {
+  const options: RedisOptions = {
     host: url.hostname,
     port: url.port ? parseInt(url.port, 10) : 6379,
     maxRetriesPerRequest: null,
@@ -38,7 +38,7 @@ function parseRedisUrl(redisUrl: string): ConnectionOptions {
   return options;
 }
 
-export function getRedisConnection(): ConnectionOptions {
+export function getRedisConnection(): RedisOptions {
   const redisUrl = process.env.REDIS_URL;
   if (!redisUrl) {
     throw new Error(
