@@ -18,6 +18,8 @@ vi.mock('ioredis', () => ({
   })),
 }));
 
+
+import v8 from 'v8';
 import { AppMonitorService } from './app-monitor.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { DiscordAlertService } from '../../queues/alerts/discord-alert.service';
@@ -250,7 +252,20 @@ describe('AppMonitorService', () => {
 
   describe('checkMemory', () => {
     it('sends critical alert when memory ratio exceeds threshold', async () => {
-      process.env.APP_ALERT_MEMORY_THRESHOLD = '0.01';
+      // heapUsed = 430 MB, heap_size_limit = 450 MB → ratio ≈ 0.956 > 0.9 threshold
+      const heapSizeLimit = 471_859_200; // 450 MB in bytes
+      const heapUsed = 450_887_680; // ~430 MB in bytes
+      const v8Spy = vi.spyOn(v8, 'getHeapStatistics').mockReturnValue({
+        heap_size_limit: heapSizeLimit,
+      } as ReturnType<typeof v8.getHeapStatistics>);
+      const memSpy = vi.spyOn(process, 'memoryUsage').mockReturnValue({
+        heapUsed,
+        heapTotal: 54_000_000,
+        rss: 0,
+        external: 0,
+        arrayBuffers: 0,
+      });
+
       process.env.DISCORD_WEBHOOK_CRITICAL =
         'https://discord.com/api/webhooks/critical';
 
@@ -282,11 +297,42 @@ describe('AppMonitorService', () => {
         expect.objectContaining({
           metric: 'memory_heap_ratio',
           severity: 'critical',
+          currentValue: Math.round((heapUsed / heapSizeLimit) * 10000) / 10000,
         }),
       );
 
       customService.onModuleDestroy();
-      delete process.env.APP_ALERT_MEMORY_THRESHOLD;
+      v8Spy.mockRestore();
+      memSpy.mockRestore();
+    });
+
+    it('does not send alert when memory ratio is below threshold', async () => {
+      // heapUsed = 49 MB, heap_size_limit = 450 MB → ratio ≈ 0.109 < 0.9 threshold
+      const heapSizeLimit = 471_859_200; // 450 MB
+      const heapUsed = 51_380_224; // ~49 MB
+      const v8Spy = vi.spyOn(v8, 'getHeapStatistics').mockReturnValue({
+        heap_size_limit: heapSizeLimit,
+      } as ReturnType<typeof v8.getHeapStatistics>);
+      const memSpy = vi.spyOn(process, 'memoryUsage').mockReturnValue({
+        heapUsed,
+        heapTotal: 54_000_000,
+        rss: 0,
+        external: 0,
+        arrayBuffers: 0,
+      });
+
+      mockRegistry.getMetricsAsJSON.mockResolvedValue([]);
+
+      await service.runCheck();
+
+      const alertCalls = sendAlertMock.mock.calls.filter(
+        (c: unknown[]) =>
+          (c[1] as { metric: string }).metric === 'memory_heap_ratio',
+      );
+      expect(alertCalls).toHaveLength(0);
+
+      v8Spy.mockRestore();
+      memSpy.mockRestore();
     });
   });
 
