@@ -33,7 +33,8 @@ function buildMockHttpContext(overrides: {
   const req = {
     method: overrides.method ?? 'GET',
     path: overrides.path ?? '/api/v1/health',
-    route: overrides.routePath != null ? { path: overrides.routePath } : undefined,
+    route:
+      overrides.routePath != null ? { path: overrides.routePath } : undefined,
   };
 
   const res = {
@@ -179,10 +180,14 @@ describe('HttpMetricsInterceptor', () => {
     const next: CallHandler = { handle: () => of(null) };
 
     await new Promise<void>((resolve) => {
-      interceptor.intercept(context, next).subscribe({ complete: () => resolve() });
+      interceptor
+        .intercept(context, next)
+        .subscribe({ complete: () => resolve() });
     });
 
-    expect(mockService.normaliseRoute).toHaveBeenCalledWith('/wp-admin/setup.php');
+    expect(mockService.normaliseRoute).toHaveBeenCalledWith(
+      '/wp-admin/setup.php',
+    );
   });
 
   it('collapses unknown route to other via normaliseRoute', async () => {
@@ -197,7 +202,9 @@ describe('HttpMetricsInterceptor', () => {
     const next: CallHandler = { handle: () => of(null) };
 
     await new Promise<void>((resolve) => {
-      interceptor.intercept(context, next).subscribe({ complete: () => resolve() });
+      interceptor
+        .intercept(context, next)
+        .subscribe({ complete: () => resolve() });
     });
 
     expect(mockService.httpRequestsTotal.inc).toHaveBeenCalledWith(

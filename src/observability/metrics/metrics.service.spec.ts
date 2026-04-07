@@ -71,9 +71,7 @@ describe('MetricsService', () => {
     it('replaces multiple UUID segments in a single known route', () => {
       const raw =
         '/api/v1/auth/550e8400-e29b-41d4-a716-446655440000/sessions/661f9511-f3ac-52e5-b827-557766551111';
-      expect(service.normaliseRoute(raw)).toBe(
-        '/api/v1/auth/:id/sessions/:id',
-      );
+      expect(service.normaliseRoute(raw)).toBe('/api/v1/auth/:id/sessions/:id');
     });
 
     it('collapses an unknown route (bot/scanner path) to other', () => {
