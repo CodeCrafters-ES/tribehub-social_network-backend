@@ -40,8 +40,8 @@ API RESTful para la red social comunitaria TribeHub, construida con **NestJS** y
 
 ## Requisitos previos
 
-- Node.js >= 18.x
-- pnpm >= 8.x
+- Node.js >= 20.x
+- pnpm >= 9.x
 - Redis (local via Docker o Railway en cloud)
 - Cuenta de Supabase con proyecto configurado
 

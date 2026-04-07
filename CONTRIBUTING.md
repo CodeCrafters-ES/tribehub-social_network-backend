@@ -4,8 +4,8 @@
 
 ## Requisitos previos
 
-- Node.js >= 18.x
-- pnpm >= 8.x
+- Node.js >= 20.x
+- pnpm >= 9.x
 - Git
 - Docker (para Redis local)
 - Cuenta de Supabase
