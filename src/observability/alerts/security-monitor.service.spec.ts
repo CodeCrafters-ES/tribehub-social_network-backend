@@ -234,6 +234,58 @@ describe('SecurityMonitorService', () => {
     });
   });
 
+  describe('MAX_TIMESTAMPS cap', () => {
+    it('keeps failedLoginTimestamps at most 10_000 entries after exceeding the cap', () => {
+      for (let i = 0; i < 10_002; i++) {
+        service.recordFailedLogin(Date.now() + i);
+      }
+
+      const timestamps = (
+        service as unknown as { failedLoginTimestamps: number[] }
+      ).failedLoginTimestamps;
+
+      expect(timestamps.length).toBe(10_000);
+    });
+
+    it('retains the most recent entries when failedLoginTimestamps exceeds the cap', () => {
+      for (let i = 0; i < 10_002; i++) {
+        service.recordFailedLogin(i);
+      }
+
+      const timestamps = (
+        service as unknown as { failedLoginTimestamps: number[] }
+      ).failedLoginTimestamps;
+
+      expect(timestamps[0]).toBe(2);
+      expect(timestamps[timestamps.length - 1]).toBe(10_001);
+    });
+
+    it('keeps invalidTokenTimestamps at most 10_000 entries after exceeding the cap', () => {
+      for (let i = 0; i < 10_005; i++) {
+        service.recordInvalidToken(Date.now() + i);
+      }
+
+      const timestamps = (
+        service as unknown as { invalidTokenTimestamps: number[] }
+      ).invalidTokenTimestamps;
+
+      expect(timestamps.length).toBe(10_000);
+    });
+
+    it('retains the most recent entries when invalidTokenTimestamps exceeds the cap', () => {
+      for (let i = 0; i < 10_005; i++) {
+        service.recordInvalidToken(i);
+      }
+
+      const timestamps = (
+        service as unknown as { invalidTokenTimestamps: number[] }
+      ).invalidTokenTimestamps;
+
+      expect(timestamps[0]).toBe(5);
+      expect(timestamps[timestamps.length - 1]).toBe(10_004);
+    });
+  });
+
   describe('onModuleInit / onModuleDestroy', () => {
     it('clears the timeout handle on destroy', () => {
       service.onModuleInit();
