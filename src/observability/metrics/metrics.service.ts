@@ -60,7 +60,7 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit(): void {}
 
-  async onModuleDestroy(): Promise<void> {
+  onModuleDestroy(): void {
     this.registry.clear();
   }
 
