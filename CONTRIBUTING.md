@@ -4,8 +4,8 @@
 
 ## Requisitos previos
 
-- Node.js >= 18.x
-- pnpm >= 8.x
+- Node.js >= 20.x
+- pnpm >= 9.x
 - Git
 - Docker (para Redis local)
 - Cuenta de Supabase
@@ -25,7 +25,7 @@ pnpm install
 ### 2. Variables de entorno
 
 ```bash
-cp .env.example .env
+cp .env.example .env.development
 ```
 
 Edita `.env` con tus credenciales. Variables mínimas para desarrollo:
@@ -46,13 +46,21 @@ METRICS_PASS=metrics_pass_changeme
 METRICS_PATH_SECRET=_internal_metrics_local
 ```
 
-### 3. Arrancar Redis local
+### 3. Aplicar migraciones de base de datos
+
+```bash
+npx prisma migrate dev
+```
+
+Sin este paso la app arranca pero todas las queries a la base de datos fallan.
+
+### 4. Arrancar Redis local
 
 ```bash
 docker run -d --name redis-tribehub -p 6379:6379 redis:alpine
 ```
 
-### 4. Arrancar el servidor
+### 5. Arrancar el servidor
 
 ```bash
 pnpm run start:dev

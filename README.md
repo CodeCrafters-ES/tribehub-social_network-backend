@@ -40,8 +40,8 @@ API RESTful para la red social comunitaria TribeHub, construida con **NestJS** y
 
 ## Requisitos previos
 
-- Node.js >= 18.x
-- pnpm >= 8.x
+- Node.js >= 20.x
+- pnpm >= 9.x
 - Redis (local via Docker o Railway en cloud)
 - Cuenta de Supabase con proyecto configurado
 
@@ -58,10 +58,18 @@ pnpm install
 Copia el archivo de entorno:
 
 ```bash
-cp .env.example .env
+cp .env.example .env.development
 ```
 
 Edita `.env` con tus credenciales (ver sección Variables de entorno).
+
+Aplica las migraciones de base de datos:
+
+```bash
+npx prisma migrate dev
+```
+
+Sin este paso la app arranca pero todas las queries a la base de datos fallan.
 
 ---
 

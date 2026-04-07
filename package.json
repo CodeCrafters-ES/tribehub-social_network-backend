@@ -23,6 +23,8 @@
     "test": "vitest run --config vitest.unit.config.ts",
     "test:cov": "vitest run --config vitest.unit.config.ts --coverage",
     "test:unit": "vitest run --config vitest.unit.config.ts",
+    "test:watch": "vitest --watch --config vitest.unit.config.ts",
+    "test:e2e": "vitest run --config vitest.integration.config.ts",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:smoke": "vitest run --config vitest.smoke.config.ts",
     "test:smoke:prod": "vitest run --config vitest.smoke.config.ts test/smoke/prod.smoke.test.ts",
