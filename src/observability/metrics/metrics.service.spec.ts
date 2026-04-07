@@ -1,6 +1,6 @@
 // src/observability/metrics/metrics.service.spec.ts
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { MetricsService } from './metrics.service';
 
 describe('MetricsService', () => {
@@ -8,6 +8,10 @@ describe('MetricsService', () => {
 
   beforeEach(() => {
     service = new MetricsService();
+  });
+
+  afterEach(() => {
+    service.onModuleDestroy();
   });
 
   describe('getMetrics()', () => {
@@ -49,31 +53,54 @@ describe('MetricsService', () => {
   });
 
   describe('normaliseRoute()', () => {
-    it('replaces a UUID segment with :id', () => {
-      const raw = '/api/v1/users/550e8400-e29b-41d4-a716-446655440000';
-      expect(service.normaliseRoute(raw)).toBe('/api/v1/users/:id');
+    it('replaces a UUID segment with :id for a known prefix', () => {
+      const raw = '/api/v1/auth/550e8400-e29b-41d4-a716-446655440000';
+      expect(service.normaliseRoute(raw)).toBe('/api/v1/auth/:id');
     });
 
-    it('replaces a numeric segment with :id', () => {
-      const raw = '/api/v1/posts/42/comments';
-      expect(service.normaliseRoute(raw)).toBe('/api/v1/posts/:id/comments');
+    it('replaces a numeric segment with :id for a known prefix', () => {
+      const raw = '/api/v1/feed/42/items';
+      expect(service.normaliseRoute(raw)).toBe('/api/v1/feed/:id/items');
     });
 
-    it('leaves routes without dynamic segments unchanged', () => {
+    it('leaves known routes without dynamic segments unchanged', () => {
       const raw = '/api/v1/auth/login';
       expect(service.normaliseRoute(raw)).toBe('/api/v1/auth/login');
     });
 
-    it('replaces multiple UUID segments in a single route', () => {
+    it('replaces multiple UUID segments in a single known route', () => {
       const raw =
-        '/api/v1/groups/550e8400-e29b-41d4-a716-446655440000/members/661f9511-f3ac-52e5-b827-557766551111';
-      expect(service.normaliseRoute(raw)).toBe(
-        '/api/v1/groups/:id/members/:id',
-      );
+        '/api/v1/auth/550e8400-e29b-41d4-a716-446655440000/sessions/661f9511-f3ac-52e5-b827-557766551111';
+      expect(service.normaliseRoute(raw)).toBe('/api/v1/auth/:id/sessions/:id');
     });
 
-    it('handles a route that is just /', () => {
-      expect(service.normaliseRoute('/')).toBe('/');
+    it('collapses an unknown route (bot/scanner path) to other', () => {
+      expect(service.normaliseRoute('/wp-admin/setup.php')).toBe('other');
+    });
+
+    it('collapses /.env scanner path to other', () => {
+      expect(service.normaliseRoute('/.env')).toBe('other');
+    });
+
+    it('collapses undefined-equivalent empty string to other', () => {
+      expect(service.normaliseRoute('')).toBe('other');
+    });
+
+    it('collapses the legacy unknown sentinel to other', () => {
+      expect(service.normaliseRoute('unknown')).toBe('other');
+    });
+
+    it('collapses a route with UUID that does not match a known prefix to other', () => {
+      const raw = '/unknown-module/550e8400-e29b-41d4-a716-446655440000';
+      expect(service.normaliseRoute(raw)).toBe('other');
+    });
+
+    it('passes /admin/queues as a known route', () => {
+      expect(service.normaliseRoute('/admin/queues')).toBe('/admin/queues');
+    });
+
+    it('passes /api/v1/health as a known route', () => {
+      expect(service.normaliseRoute('/api/v1/health')).toBe('/api/v1/health');
     });
   });
 

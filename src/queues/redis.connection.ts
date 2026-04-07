@@ -13,6 +13,7 @@
 // constructors as the `connection` option.
 
 import { ConnectionOptions } from 'bullmq';
+import Redis from 'ioredis';
 
 function parseRedisUrl(redisUrl: string): ConnectionOptions {
   const url = new URL(redisUrl);
@@ -46,4 +47,24 @@ export function getRedisConnection(): ConnectionOptions {
     );
   }
   return parseRedisUrl(redisUrl);
+}
+
+/**
+ * Builds a fresh IORedis instance with a bounded retryStrategy.
+ * Returning null from retryStrategy after 5 attempts stops IORedis from
+ * retrying and lets BullMQ surface the connection error rather than growing
+ * its internal command buffer without limit.
+ *
+ * Each Queue and Worker must receive its own instance: BullMQ v5 does not
+ * duplicate a shared IORedis connection for the blocking client it needs
+ * internally, so sharing a single instance between Queue and Worker would
+ * cause command-interleaving issues.
+ */
+export function buildRedisClient(): Redis {
+  const options = getRedisConnection();
+  return new Redis({
+    ...options,
+    retryStrategy: (times: number) =>
+      times > 5 ? null : Math.min(times * 500, 5000),
+  });
 }

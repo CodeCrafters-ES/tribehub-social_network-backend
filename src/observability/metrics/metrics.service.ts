@@ -9,7 +9,7 @@
 //   - MetricsController  → serialises the registry to Prometheus text format
 //   - HttpMetricsInterceptor → increments counters/histograms per request
 
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import {
   collectDefaultMetrics,
   Counter,
@@ -18,7 +18,7 @@ import {
 } from 'prom-client';
 
 @Injectable()
-export class MetricsService implements OnModuleInit {
+export class MetricsService implements OnModuleInit, OnModuleDestroy {
   readonly registry: Registry;
 
   readonly httpRequestsTotal: Counter<string>;
@@ -58,29 +58,54 @@ export class MetricsService implements OnModuleInit {
     });
   }
 
-  // onModuleInit is a lifecycle hook — nothing extra needed here because
-  // collectDefaultMetrics() already started collecting in the constructor,
-  // but having the hook keeps the door open for future setup steps.
   onModuleInit(): void {}
+
+  onModuleDestroy(): void {
+    this.registry.clear();
+  }
+
+  // Routes that this application exposes. Any normalised route that does not
+  // start with one of these prefixes is collapsed to 'other' so that bots,
+  // scanners and unknown paths never create new time-series in the registry.
+  private static readonly KNOWN_ROUTE_PREFIXES = [
+    '/api/v1/auth',
+    '/api/v1/health',
+    '/api/v1/feed',
+    '/api/v1/search',
+    '/api/v1/_internal',
+    '/api/v1/',
+    '/admin/queues',
+  ];
 
   /**
    * Normalise an Express/NestJS route string to eliminate dynamic segments
    * so that UUIDs and other IDs never become label values (high cardinality).
+   * Routes not matching a known prefix are collapsed to 'other'.
    *
    * Examples:
-   *   /api/v1/users/abc-123-def  →  /api/v1/users/:id
-   *   /api/v1/posts/42/comments  →  /api/v1/posts/:id/comments
-   *
-   * The rule: any path segment that looks like a UUID or a numeric ID is
-   * replaced with `:id`.
+   *   /api/v1/users/abc-123-def          →  /api/v1/users/:id
+   *   /api/v1/posts/42/comments          →  /api/v1/posts/:id/comments
+   *   /wp-admin/setup.php                →  other
+   *   /.env                              →  other
+   *   undefined / unmatched (undefined)  →  other
    */
   normaliseRoute(rawRoute: string): string {
-    return rawRoute
+    if (!rawRoute || rawRoute === 'unknown') {
+      return 'other';
+    }
+
+    const normalised = rawRoute
       .replace(
         /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
         '/:id',
       )
       .replace(/\/\d+(?=\/|$)/g, '/:id');
+
+    const isKnown = MetricsService.KNOWN_ROUTE_PREFIXES.some((prefix) =>
+      normalised.startsWith(prefix),
+    );
+
+    return isKnown ? normalised : 'other';
   }
 
   /** Serialise the registry to Prometheus text exposition format. */
