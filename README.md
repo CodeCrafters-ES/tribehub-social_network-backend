@@ -58,7 +58,7 @@ pnpm install
 Copia el archivo de entorno:
 
 ```bash
-cp .env.example .env
+cp .env.example .env.development
 ```
 
 Edita `.env` con tus credenciales (ver sección Variables de entorno).

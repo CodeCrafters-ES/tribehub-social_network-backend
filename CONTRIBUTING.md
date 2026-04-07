@@ -25,7 +25,7 @@ pnpm install
 ### 2. Variables de entorno
 
 ```bash
-cp .env.example .env
+cp .env.example .env.development
 ```
 
 Edita `.env` con tus credenciales. Variables mínimas para desarrollo:
