@@ -10,8 +10,8 @@ describe('MetricsService', () => {
     service = new MetricsService();
   });
 
-  afterEach(async () => {
-    await service.onModuleDestroy();
+  afterEach(() => {
+    service.onModuleDestroy();
   });
 
   describe('getMetrics()', () => {
