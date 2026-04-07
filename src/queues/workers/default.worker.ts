@@ -18,7 +18,7 @@ import {
 } from '@nestjs/common';
 import { Job, Worker } from 'bullmq';
 import { JOB_TYPES, QUEUE_NAMES } from '../queues.constants';
-import { getRedisConnection } from '../redis.connection';
+import { buildRedisClient } from '../redis.connection';
 import type {
   SendWelcomeEmailPayload,
   ProcessImagePayload,
@@ -36,7 +36,7 @@ export class DefaultWorker implements OnModuleInit, OnModuleDestroy {
       QUEUE_NAMES.DEFAULT,
       (job: Job) => this.process(job),
       {
-        connection: getRedisConnection(),
+        connection: buildRedisClient(),
         concurrency: WORKER_CONCURRENCY,
       },
     );

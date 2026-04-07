@@ -23,7 +23,7 @@ vi.mock('bullmq', () => ({
 }));
 
 vi.mock('../redis.connection', () => ({
-  getRedisConnection: vi
+  buildRedisClient: vi
     .fn()
     .mockReturnValue({ host: 'localhost', port: 6379 }),
 }));
