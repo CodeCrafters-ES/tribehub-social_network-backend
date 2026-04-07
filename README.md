@@ -63,6 +63,14 @@ cp .env.example .env
 
 Edita `.env` con tus credenciales (ver sección Variables de entorno).
 
+Aplica las migraciones de base de datos:
+
+```bash
+npx prisma migrate dev
+```
+
+Sin este paso la app arranca pero todas las queries a la base de datos fallan.
+
 ---
 
 ## Arrancar en desarrollo
