@@ -4,6 +4,7 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
+import v8 from 'v8';
 import Redis from 'ioredis';
 import { MetricsService } from '../metrics/metrics.service';
 import { DiscordAlertService } from '../../queues/alerts/discord-alert.service';
@@ -250,13 +251,14 @@ export class AppMonitorService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async checkMemory(): Promise<void> {
-    const { heapUsed, heapTotal } = process.memoryUsage();
-    const ratio = heapUsed / heapTotal;
+    const { heapUsed } = process.memoryUsage();
+    const { heap_size_limit: heapSizeLimit } = v8.getHeapStatistics();
+    const ratio = heapUsed / heapSizeLimit;
 
     this.logger.log({
       event: 'app_monitor.memory',
       heapUsed,
-      heapTotal,
+      heapSizeLimit,
       ratio,
       threshold: this.memoryThreshold,
     });
