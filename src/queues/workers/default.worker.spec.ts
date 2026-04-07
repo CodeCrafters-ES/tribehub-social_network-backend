@@ -23,9 +23,7 @@ vi.mock('bullmq', () => ({
 }));
 
 vi.mock('../redis.connection', () => ({
-  getRedisConnection: vi
-    .fn()
-    .mockReturnValue({ host: 'localhost', port: 6379 }),
+  buildRedisClient: vi.fn().mockReturnValue({ host: 'localhost', port: 6379 }),
 }));
 
 import { DefaultWorker } from './default.worker';

@@ -11,7 +11,7 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { JOB_TYPES, QUEUE_NAMES } from './queues.constants';
-import { getRedisConnection } from './redis.connection';
+import { buildRedisClient } from './redis.connection';
 
 export interface SendWelcomeEmailPayload {
   userId: string;
@@ -33,7 +33,7 @@ export class QueueService implements OnModuleDestroy {
 
   constructor() {
     this.queue = new Queue(QUEUE_NAMES.DEFAULT, {
-      connection: getRedisConnection(),
+      connection: buildRedisClient(),
       defaultJobOptions: {
         attempts: 3,
         backoff: {
