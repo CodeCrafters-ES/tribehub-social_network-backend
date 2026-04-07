@@ -19,7 +19,9 @@ vi.mock('ioredis', () => ({
 }));
 
 const { mockGetHeapStatistics } = vi.hoisted(() => ({
-  mockGetHeapStatistics: vi.fn().mockReturnValue({ heap_size_limit: 471_859_200 }),
+  mockGetHeapStatistics: vi
+    .fn()
+    .mockReturnValue({ heap_size_limit: 471_859_200 }),
 }));
 vi.mock('v8', () => ({ getHeapStatistics: mockGetHeapStatistics }));
 import { AppMonitorService } from './app-monitor.service';
@@ -257,7 +259,9 @@ describe('AppMonitorService', () => {
       // heapUsed = 430 MB, heap_size_limit = 450 MB → ratio ≈ 0.956 > 0.9 threshold
       const heapSizeLimit = 471_859_200; // 450 MB in bytes
       const heapUsed = 450_887_680; // ~430 MB in bytes
-      mockGetHeapStatistics.mockReturnValueOnce({ heap_size_limit: heapSizeLimit } as ReturnType<typeof import('v8').getHeapStatistics>);
+      mockGetHeapStatistics.mockReturnValueOnce({
+        heap_size_limit: heapSizeLimit,
+      } as ReturnType<typeof import('v8').getHeapStatistics>);
       const memSpy = vi.spyOn(process, 'memoryUsage').mockReturnValue({
         heapUsed,
         heapTotal: 54_000_000,
@@ -309,7 +313,9 @@ describe('AppMonitorService', () => {
       // heapUsed = 49 MB, heap_size_limit = 450 MB → ratio ≈ 0.109 < 0.9 threshold
       const heapSizeLimit = 471_859_200; // 450 MB
       const heapUsed = 51_380_224; // ~49 MB
-      mockGetHeapStatistics.mockReturnValueOnce({ heap_size_limit: heapSizeLimit } as ReturnType<typeof import('v8').getHeapStatistics>);
+      mockGetHeapStatistics.mockReturnValueOnce({
+        heap_size_limit: heapSizeLimit,
+      } as ReturnType<typeof import('v8').getHeapStatistics>);
       const memSpy = vi.spyOn(process, 'memoryUsage').mockReturnValue({
         heapUsed,
         heapTotal: 54_000_000,
