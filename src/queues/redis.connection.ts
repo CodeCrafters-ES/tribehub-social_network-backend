@@ -50,10 +50,10 @@ export function getRedisConnection(): ConnectionOptions {
 }
 
 /**
- * Builds a fresh IORedis instance with a bounded retryStrategy.
- * Returning null from retryStrategy after 5 attempts stops IORedis from
- * retrying and lets BullMQ surface the connection error rather than growing
- * its internal command buffer without limit.
+ * Builds a fresh IORedis instance configured for use with BullMQ.
+ * `maxRetriesPerRequest: null` and `enableReadyCheck: false` are set by
+ * parseRedisUrl() and are the correct IORedis v5 knobs for preventing
+ * unbounded command-buffer growth — retryStrategy was removed in IORedis v5.
  *
  * Each Queue and Worker must receive its own instance: BullMQ v5 does not
  * duplicate a shared IORedis connection for the blocking client it needs
@@ -62,9 +62,5 @@ export function getRedisConnection(): ConnectionOptions {
  */
 export function buildRedisClient(): Redis {
   const options = getRedisConnection();
-  return new Redis({
-    ...options,
-    retryStrategy: (times: number) =>
-      times > 5 ? null : Math.min(times * 500, 5000),
-  });
+  return new Redis({ ...options });
 }
