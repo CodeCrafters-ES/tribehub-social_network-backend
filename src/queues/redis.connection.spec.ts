@@ -1,8 +1,15 @@
 // src/queues/redis.connection.spec.ts
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { RedisOptions } from 'bullmq';
-import { getRedisConnection } from './redis.connection';
+
+vi.mock('ioredis', () => {
+  const MockRedis = vi.fn().mockImplementation((opts: unknown) => opts);
+  return { default: MockRedis };
+});
+
+import { default as MockRedis } from 'ioredis';
+import { getRedisConnection, buildRedisClient } from './redis.connection';
 
 describe('getRedisConnection', () => {
   const originalEnv = process.env;
@@ -66,5 +73,51 @@ describe('getRedisConnection', () => {
     process.env.REDIS_URL = 'redis://localhost:6379';
     const conn = getRedisConnection() as RedisOptions;
     expect(conn.maxRetriesPerRequest).toBeNull();
+  });
+});
+
+describe('buildRedisClient', () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  it('throws when REDIS_URL is not set', () => {
+    delete process.env.REDIS_URL;
+    expect(() => buildRedisClient()).toThrow(
+      'REDIS_URL environment variable is not set',
+    );
+  });
+
+  it('passes retryStrategy to the IORedis constructor', () => {
+    process.env.REDIS_URL = 'redis://localhost:6379';
+    buildRedisClient();
+    const opts = (MockRedis as ReturnType<typeof vi.fn>).mock.calls.at(
+      -1,
+    )?.[0] as Record<string, unknown>;
+    expect(typeof opts.retryStrategy).toBe('function');
+  });
+
+  it('retryStrategy returns null after 5 attempts', () => {
+    process.env.REDIS_URL = 'redis://localhost:6379';
+    buildRedisClient();
+    const opts = (MockRedis as ReturnType<typeof vi.fn>).mock.calls.at(
+      -1,
+    )?.[0] as { retryStrategy: (n: number) => number | null };
+    expect(opts.retryStrategy(6)).toBeNull();
+  });
+
+  it('retryStrategy returns a delay for attempt 1', () => {
+    process.env.REDIS_URL = 'redis://localhost:6379';
+    buildRedisClient();
+    const opts = (MockRedis as ReturnType<typeof vi.fn>).mock.calls.at(
+      -1,
+    )?.[0] as { retryStrategy: (n: number) => number | null };
+    expect(opts.retryStrategy(1)).toBe(500);
   });
 });

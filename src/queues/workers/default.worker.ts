@@ -18,7 +18,7 @@ import {
 } from '@nestjs/common';
 import { Job, Worker } from 'bullmq';
 import { JOB_TYPES, QUEUE_NAMES } from '../queues.constants';
-import { getRedisConnection } from '../redis.connection';
+import { buildRedisClient } from '../redis.connection';
 import type {
   SendWelcomeEmailPayload,
   ProcessImagePayload,
@@ -34,9 +34,9 @@ export class DefaultWorker implements OnModuleInit, OnModuleDestroy {
   onModuleInit(): void {
     this.worker = new Worker(
       QUEUE_NAMES.DEFAULT,
-      (job: Job) => Promise.resolve(this.process(job)),
+      (job: Job) => this.process(job),
       {
-        connection: getRedisConnection(),
+        connection: buildRedisClient(),
         concurrency: WORKER_CONCURRENCY,
       },
     );
@@ -96,7 +96,7 @@ export class DefaultWorker implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private process(job: Job): void {
+  private async process(job: Job): Promise<void> {
     const startMs = Date.now();
 
     this.logger.log({
@@ -109,10 +109,10 @@ export class DefaultWorker implements OnModuleInit, OnModuleDestroy {
 
     switch (job.name) {
       case JOB_TYPES.EMAIL_SEND_WELCOME:
-        this.handleSendWelcomeEmail(job as Job<SendWelcomeEmailPayload>);
+        await this.handleSendWelcomeEmail(job as Job<SendWelcomeEmailPayload>);
         break;
       case JOB_TYPES.MEDIA_PROCESS_IMAGE:
-        this.handleProcessImage(job as Job<ProcessImagePayload>);
+        await this.handleProcessImage(job as Job<ProcessImagePayload>);
         break;
       default:
         this.logger.warn({
@@ -132,7 +132,10 @@ export class DefaultWorker implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  private handleSendWelcomeEmail(job: Job<SendWelcomeEmailPayload>): void {
+  // eslint-disable-next-line @typescript-eslint/require-await
+  private async handleSendWelcomeEmail(
+    job: Job<SendWelcomeEmailPayload>,
+  ): Promise<void> {
     const { userId, requestId } = job.data;
     this.logger.log({
       event: 'worker.email_send_welcome',
@@ -142,7 +145,10 @@ export class DefaultWorker implements OnModuleInit, OnModuleDestroy {
     // Placeholder: real email dispatch will be wired here.
   }
 
-  private handleProcessImage(job: Job<ProcessImagePayload>): void {
+  // eslint-disable-next-line @typescript-eslint/require-await
+  private async handleProcessImage(
+    job: Job<ProcessImagePayload>,
+  ): Promise<void> {
     const { assetId, userId, requestId } = job.data;
     this.logger.log({
       event: 'worker.media_process_image',

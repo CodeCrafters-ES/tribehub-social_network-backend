@@ -10,6 +10,7 @@ const DEFAULT_INTERVAL_MS = 60_000;
 const WINDOW_MS = 5 * 60 * 1000;
 const DEFAULT_BRUTE_FORCE_THRESHOLD = 10;
 const DEFAULT_INVALID_TOKEN_THRESHOLD = 50;
+const MAX_TIMESTAMPS = 10_000;
 
 @Injectable()
 export class SecurityMonitorService implements OnModuleInit, OnModuleDestroy {
@@ -46,12 +47,24 @@ export class SecurityMonitorService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  recordFailedLogin(): void {
-    this.failedLoginTimestamps.push(Date.now());
+  recordFailedLogin(timestamp: number = Date.now()): void {
+    this.failedLoginTimestamps.push(timestamp);
+    if (this.failedLoginTimestamps.length > MAX_TIMESTAMPS) {
+      this.failedLoginTimestamps.splice(
+        0,
+        this.failedLoginTimestamps.length - MAX_TIMESTAMPS,
+      );
+    }
   }
 
-  recordInvalidToken(): void {
-    this.invalidTokenTimestamps.push(Date.now());
+  recordInvalidToken(timestamp: number = Date.now()): void {
+    this.invalidTokenTimestamps.push(timestamp);
+    if (this.invalidTokenTimestamps.length > MAX_TIMESTAMPS) {
+      this.invalidTokenTimestamps.splice(
+        0,
+        this.invalidTokenTimestamps.length - MAX_TIMESTAMPS,
+      );
+    }
   }
 
   private scheduleCheck(): void {
