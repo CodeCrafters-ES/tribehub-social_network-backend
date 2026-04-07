@@ -27,13 +27,13 @@ function buildMockMetricsService(): MockMetricsService & MetricsService {
 function buildMockHttpContext(overrides: {
   method?: string;
   path?: string;
-  routePath?: string;
+  routePath?: string | null;
   statusCode?: number;
 }): ExecutionContext {
   const req = {
     method: overrides.method ?? 'GET',
     path: overrides.path ?? '/api/v1/health',
-    route: overrides.routePath ? { path: overrides.routePath } : undefined,
+    route: overrides.routePath != null ? { path: overrides.routePath } : undefined,
   };
 
   const res = {
@@ -166,6 +166,42 @@ describe('HttpMetricsInterceptor', () => {
     // normaliseRoute is called with the matched route pattern, not the raw URL
     expect(mockService.normaliseRoute).toHaveBeenCalledWith(
       '/api/v1/users/:id',
+    );
+  });
+
+  it('passes raw req.path to normaliseRoute when no route is matched', async () => {
+    const context = buildMockHttpContext({
+      method: 'GET',
+      path: '/wp-admin/setup.php',
+      // routePath intentionally omitted — simulates unmatched request (404/bot)
+    });
+
+    const next: CallHandler = { handle: () => of(null) };
+
+    await new Promise<void>((resolve) => {
+      interceptor.intercept(context, next).subscribe({ complete: () => resolve() });
+    });
+
+    expect(mockService.normaliseRoute).toHaveBeenCalledWith('/wp-admin/setup.php');
+  });
+
+  it('collapses unknown route to other via normaliseRoute', async () => {
+    // normaliseRoute returns 'other' for unknown prefixes; verify the label used
+    mockService.normaliseRoute.mockReturnValue('other');
+
+    const context = buildMockHttpContext({
+      method: 'GET',
+      path: '/.env',
+    });
+
+    const next: CallHandler = { handle: () => of(null) };
+
+    await new Promise<void>((resolve) => {
+      interceptor.intercept(context, next).subscribe({ complete: () => resolve() });
+    });
+
+    expect(mockService.httpRequestsTotal.inc).toHaveBeenCalledWith(
+      expect.objectContaining({ route: 'other' }),
     );
   });
 
