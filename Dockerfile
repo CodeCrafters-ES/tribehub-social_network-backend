@@ -23,4 +23,4 @@ RUN pnpm run build
 
 EXPOSE 3000
 
-CMD ["node", "--max-old-space-size=450", "dist/src/main"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node --max-old-space-size=450 dist/src/main"]
