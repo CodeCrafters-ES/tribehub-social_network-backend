@@ -1,6 +1,6 @@
 // src/observability/metrics/metrics.service.spec.ts
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { MetricsService } from './metrics.service';
 
 describe('MetricsService', () => {
@@ -8,6 +8,10 @@ describe('MetricsService', () => {
 
   beforeEach(() => {
     service = new MetricsService();
+  });
+
+  afterEach(async () => {
+    await service.onModuleDestroy();
   });
 
   describe('getMetrics()', () => {

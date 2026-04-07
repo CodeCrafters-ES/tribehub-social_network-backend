@@ -9,7 +9,7 @@
 //   - MetricsController  → serialises the registry to Prometheus text format
 //   - HttpMetricsInterceptor → increments counters/histograms per request
 
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import {
   collectDefaultMetrics,
   Counter,
@@ -18,7 +18,7 @@ import {
 } from 'prom-client';
 
 @Injectable()
-export class MetricsService implements OnModuleInit {
+export class MetricsService implements OnModuleInit, OnModuleDestroy {
   readonly registry: Registry;
 
   readonly httpRequestsTotal: Counter<string>;
@@ -58,10 +58,11 @@ export class MetricsService implements OnModuleInit {
     });
   }
 
-  // onModuleInit is a lifecycle hook — nothing extra needed here because
-  // collectDefaultMetrics() already started collecting in the constructor,
-  // but having the hook keeps the door open for future setup steps.
   onModuleInit(): void {}
+
+  async onModuleDestroy(): Promise<void> {
+    this.registry.clear();
+  }
 
   /**
    * Normalise an Express/NestJS route string to eliminate dynamic segments
