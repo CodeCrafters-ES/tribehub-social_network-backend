@@ -18,7 +18,10 @@ vi.mock('ioredis', () => ({
   })),
 }));
 
-import v8 from 'v8';
+const { mockGetHeapStatistics } = vi.hoisted(() => ({
+  mockGetHeapStatistics: vi.fn().mockReturnValue({ heap_size_limit: 471_859_200 }),
+}));
+vi.mock('v8', () => ({ getHeapStatistics: mockGetHeapStatistics }));
 import { AppMonitorService } from './app-monitor.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { DiscordAlertService } from '../../queues/alerts/discord-alert.service';
@@ -254,9 +257,7 @@ describe('AppMonitorService', () => {
       // heapUsed = 430 MB, heap_size_limit = 450 MB → ratio ≈ 0.956 > 0.9 threshold
       const heapSizeLimit = 471_859_200; // 450 MB in bytes
       const heapUsed = 450_887_680; // ~430 MB in bytes
-      const v8Spy = vi.spyOn(v8, 'getHeapStatistics').mockReturnValue({
-        heap_size_limit: heapSizeLimit,
-      } as ReturnType<typeof v8.getHeapStatistics>);
+      mockGetHeapStatistics.mockReturnValueOnce({ heap_size_limit: heapSizeLimit } as ReturnType<typeof import('v8').getHeapStatistics>);
       const memSpy = vi.spyOn(process, 'memoryUsage').mockReturnValue({
         heapUsed,
         heapTotal: 54_000_000,
@@ -301,7 +302,6 @@ describe('AppMonitorService', () => {
       );
 
       customService.onModuleDestroy();
-      v8Spy.mockRestore();
       memSpy.mockRestore();
     });
 
@@ -309,9 +309,7 @@ describe('AppMonitorService', () => {
       // heapUsed = 49 MB, heap_size_limit = 450 MB → ratio ≈ 0.109 < 0.9 threshold
       const heapSizeLimit = 471_859_200; // 450 MB
       const heapUsed = 51_380_224; // ~49 MB
-      const v8Spy = vi.spyOn(v8, 'getHeapStatistics').mockReturnValue({
-        heap_size_limit: heapSizeLimit,
-      } as ReturnType<typeof v8.getHeapStatistics>);
+      mockGetHeapStatistics.mockReturnValueOnce({ heap_size_limit: heapSizeLimit } as ReturnType<typeof import('v8').getHeapStatistics>);
       const memSpy = vi.spyOn(process, 'memoryUsage').mockReturnValue({
         heapUsed,
         heapTotal: 54_000_000,
@@ -330,7 +328,6 @@ describe('AppMonitorService', () => {
       );
       expect(alertCalls).toHaveLength(0);
 
-      v8Spy.mockRestore();
       memSpy.mockRestore();
     });
   });
