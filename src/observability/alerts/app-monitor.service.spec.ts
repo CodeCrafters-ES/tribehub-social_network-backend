@@ -18,7 +18,6 @@ vi.mock('ioredis', () => ({
   })),
 }));
 
-
 import v8 from 'v8';
 import { AppMonitorService } from './app-monitor.service';
 import { MetricsService } from '../metrics/metrics.service';
