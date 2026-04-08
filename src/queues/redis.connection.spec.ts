@@ -120,7 +120,9 @@ describe('buildRedisClient', () => {
     )?.[0] as Record<string, unknown>;
     expect(opts.retryStrategy).toBeDefined();
     expect(typeof opts.retryStrategy).toBe('function');
-    const retryStrategy = opts.retryStrategy as (times: number) => number | null;
+    const retryStrategy = opts.retryStrategy as (
+      times: number,
+    ) => number | null;
     // Returns null (stop retrying) after 5 attempts
     expect(retryStrategy(6)).toBeNull();
     // Returns a capped back-off delay before reaching the limit
