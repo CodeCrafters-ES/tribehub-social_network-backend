@@ -30,10 +30,12 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy {
     const environment = process.env.NODE_ENV ?? 'development';
 
     // Default Node.js process metrics (CPU, memory, GC, etc.)
+    // Note: prom-client v15 removed `collectInterval` from
+    // DefaultMetricsCollectorConfiguration. The collection interval is now
+    // controlled internally by the library and cannot be overridden here.
     collectDefaultMetrics({
       register: this.registry,
       labels: { environment },
-      collectInterval: 60_000,
     });
 
     // --- HTTP request counter ---

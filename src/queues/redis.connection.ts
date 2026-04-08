@@ -13,7 +13,7 @@
 // constructors as the `connection` option.
 
 import { ConnectionOptions } from 'bullmq';
-import Redis from 'ioredis';
+import Redis, { RedisOptions } from 'ioredis';
 
 function parseRedisUrl(redisUrl: string): ConnectionOptions {
   const url = new URL(redisUrl);
@@ -61,7 +61,11 @@ export function getRedisConnection(): ConnectionOptions {
  * cause command-interleaving issues.
  */
 export function buildRedisClient(): Redis {
-  const options = getRedisConnection();
+  // getRedisConnection() always returns a plain RedisOptions object (built by
+  // parseRedisUrl). ConnectionOptions is a wider BullMQ union that also
+  // includes IORedis.Redis / IORedis.Cluster instances, so we cast here to
+  // tell TypeScript the actual narrower type before spreading.
+  const options = getRedisConnection() as RedisOptions;
   return new Redis({
     ...options,
     retryStrategy: (times: number) =>
