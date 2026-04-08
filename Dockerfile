@@ -64,8 +64,9 @@ COPY --from=builder /app/dist ./dist
 # The schema is needed by `prisma migrate deploy` at startup.
 # The generated client is needed because prisma (devDep) is not
 # installed in this stage and therefore did not re-generate it.
+# Note: Prisma 7 with driver adapters generates the client entirely
+# into node_modules/@prisma/client — node_modules/.prisma is not created.
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
 # Copy the Prisma CLI from the builder so `prisma migrate deploy` in the
