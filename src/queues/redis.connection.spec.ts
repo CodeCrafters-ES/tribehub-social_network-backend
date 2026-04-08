@@ -112,12 +112,20 @@ describe('buildRedisClient', () => {
     expect(opts.enableReadyCheck).toBe(false);
   });
 
-  it('does not pass retryStrategy to the IORedis constructor', () => {
+  it('passes a retryStrategy function to the IORedis constructor', () => {
     process.env.REDIS_URL = 'redis://localhost:6379';
     buildRedisClient();
     const opts = (MockRedis as ReturnType<typeof vi.fn>).mock.calls.at(
       -1,
     )?.[0] as Record<string, unknown>;
-    expect(opts.retryStrategy).toBeUndefined();
+    expect(opts.retryStrategy).toBeDefined();
+    expect(typeof opts.retryStrategy).toBe('function');
+    const retryStrategy = opts.retryStrategy as (times: number) => number | null;
+    // Returns null (stop retrying) after 5 attempts
+    expect(retryStrategy(6)).toBeNull();
+    // Returns a capped back-off delay before reaching the limit
+    expect(retryStrategy(1)).toBe(Math.min(1 * 500, 5000));
+    expect(retryStrategy(5)).toBe(Math.min(5 * 500, 5000));
+    expect(retryStrategy(20)).toBeNull();
   });
 });
