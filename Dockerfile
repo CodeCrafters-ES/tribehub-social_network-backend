@@ -32,8 +32,8 @@ RUN pnpm run build
 
 # ─────────────────────────────────────────────
 # Stage 2 — runner
-# Production image: no devDeps, no tsc, no CLI.
-# Only compiled output + production node_modules.
+# Production image: no devDeps, no tsc.
+# Only compiled output + production node_modules + Prisma CLI (copied from builder).
 # ─────────────────────────────────────────────
 FROM node:20-alpine AS runner
 
@@ -68,14 +68,20 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
+# Copy the Prisma CLI from the builder so `prisma migrate deploy` in the
+# CMD does not rely on npx downloading it from npm at runtime.
+# prisma is a devDependency and is therefore absent from the prod install.
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+
 # Run as non-root user for security
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 RUN chown -R appuser:appgroup /app
 USER appuser
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD wget -qO- http://localhost:3000/health || exit 1
+  CMD wget -qO- http://localhost:3000/api/v1/health || exit 1
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node --max-old-space-size=450 dist/src/main"]
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node --max-old-space-size=450 dist/src/main"]
