@@ -18,8 +18,8 @@ export class SecurityMonitorService implements OnModuleInit, OnModuleDestroy {
   private readonly intervalMs: number;
   private readonly bruteForceThreshold: number;
   private readonly invalidTokenThreshold: number;
-  private readonly failedLoginTimestamps: number[] = [];
-  private readonly invalidTokenTimestamps: number[] = [];
+  private failedLoginTimestamps: number[] = [];
+  private invalidTokenTimestamps: number[] = [];
   private timeoutHandle: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly discordAlertService: DiscordAlertService) {
@@ -79,8 +79,14 @@ export class SecurityMonitorService implements OnModuleInit, OnModuleDestroy {
     const now = Date.now();
     const cutoff = now - WINDOW_MS;
 
-    this.pruneTimestamps(this.failedLoginTimestamps, cutoff);
-    this.pruneTimestamps(this.invalidTokenTimestamps, cutoff);
+    this.failedLoginTimestamps = this.pruneTimestamps(
+      this.failedLoginTimestamps,
+      cutoff,
+    );
+    this.invalidTokenTimestamps = this.pruneTimestamps(
+      this.invalidTokenTimestamps,
+      cutoff,
+    );
 
     const failedLoginCount = this.failedLoginTimestamps.length;
     const invalidTokenCount = this.invalidTokenTimestamps.length;
@@ -120,11 +126,11 @@ export class SecurityMonitorService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private pruneTimestamps(list: number[], cutoff: number): void {
+  private pruneTimestamps(list: number[], cutoff: number): number[] {
     let i = 0;
     while (i < list.length && list[i] < cutoff) {
       i++;
     }
-    list.splice(0, i);
+    return list.slice(i);
   }
 }

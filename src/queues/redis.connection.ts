@@ -12,8 +12,7 @@
 // The returned object is passed directly to BullMQ Queue and Worker
 // constructors as the `connection` option.
 
-import type { RedisOptions } from 'ioredis';
-import Redis from 'ioredis';
+import Redis, { RedisOptions } from 'ioredis';
 
 function parseRedisUrl(redisUrl: string): RedisOptions {
   const url = new URL(redisUrl);
@@ -62,5 +61,9 @@ export function getRedisConnection(): RedisOptions {
  */
 export function buildRedisClient(): Redis {
   const options = getRedisConnection();
-  return new Redis({ ...options });
+  return new Redis({
+    ...options,
+    retryStrategy: (times: number) =>
+      times > 5 ? null : Math.min(times * 500, 5000),
+  });
 }
