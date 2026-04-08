@@ -99,6 +99,8 @@ pnpm run start:dev
 
 La API estará disponible en `http://localhost:3000/api/v1`.
 
+La documentación de la API está disponible en `http://localhost:3000/api/docs`.
+
 ---
 
 ## Flujo de trabajo Git
