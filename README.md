@@ -61,7 +61,7 @@ Copia el archivo de entorno:
 cp .env.example .env.development
 ```
 
-Edita `.env` con tus credenciales (ver sección Variables de entorno).
+Edita `.env.development` con tus credenciales (ver sección Variables de entorno).
 
 Aplica las migraciones de base de datos:
 
@@ -102,6 +102,7 @@ La API estará disponible en `http://localhost:3000/api/v1`.
 | `DATABASE_URL` | URL de conexión PostgreSQL | Sí |
 | `REDIS_URL` | URL de conexión Redis | Sí |
 | `REDIS_TLS` | `true` para habilitar TLS (Railway/producción) | No |
+| `SYSTEM_CONFIG_CACHE_TTL_SECONDS` | TTL en segundos para la caché de feature flags en memoria (default: 60) | No |
 | `FRONTEND_URL` | URL del frontend (redirecciones y CORS) | Sí |
 | `SENTRY_DSN` | DSN de Sentry (si no se define, Sentry se deshabilita) | No |
 | `METRICS_USER` | Usuario Basic Auth para endpoint de métricas | Sí |
