@@ -61,19 +61,27 @@ METRICS_PATH_SECRET=_internal_metrics_local
 ### 4. Levantar dependencias locales con Docker
 
 ```bash
-# PostgreSQL
-docker run -d --name tribehub-db \
-  -e POSTGRES_USER=tribehub \
-  -e POSTGRES_PASSWORD=tribehub \
-  -e POSTGRES_DB=tribehub_dev \
-  -p 5432:5432 \
-  postgres:16-alpine
-
-# Redis
-docker run -d --name tribehub-redis -p 6379:6379 redis:alpine
+docker compose up -d
 ```
 
-Estos valores coinciden con el `DATABASE_URL` del paso anterior. Solo necesitas ejecutarlos una vez; Docker los reinicia automáticamente al arrancar el sistema.
+Esto levanta PostgreSQL 16 y Redis con los mismos valores que el `DATABASE_URL` del paso anterior. Los contenedores se reinician automáticamente al arrancar el sistema (`restart: unless-stopped`).
+
+Para pararlos: `docker compose down`. Para pararlos y borrar los datos persistidos: `docker compose down -v`.
+
+> **Sin Docker Compose** — puedes levantar cada servicio por separado con `docker run`:
+>
+> ```bash
+> # PostgreSQL
+> docker run -d --name tribehub-db \
+>   -e POSTGRES_USER=tribehub \
+>   -e POSTGRES_PASSWORD=tribehub \
+>   -e POSTGRES_DB=tribehub_dev \
+>   -p 5432:5432 \
+>   postgres:16-alpine
+>
+> # Redis
+> docker run -d --name tribehub-redis -p 6379:6379 redis:alpine
+> ```
 
 ### 5. Aplicar migraciones de base de datos
 

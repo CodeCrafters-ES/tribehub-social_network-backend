@@ -1,0 +1,31 @@
+# Local development dependencies only.
+# Does NOT include the NestJS service — start it with: pnpm run start:dev
+#
+# Usage:
+#   docker compose up -d      # start
+#   docker compose down       # stop and remove containers
+#   docker compose down -v    # stop and also delete persisted volumes
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: tribehub-db
+    environment:
+      POSTGRES_USER: tribehub
+      POSTGRES_PASSWORD: tribehub
+      POSTGRES_DB: tribehub_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - tribehub_db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:alpine
+    container_name: tribehub-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+volumes:
+  tribehub_db_data:
