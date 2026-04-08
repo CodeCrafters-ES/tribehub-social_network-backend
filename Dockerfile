@@ -52,9 +52,8 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
 
 # Install production dependencies only.
-# The postinstall hook calls `prisma generate` but prisma is a
-# devDependency, so it will not be present here — the generated
-# client is copied from the builder stage instead.
+# --ignore-scripts skips the postinstall hook (prisma generate).
+# We run prisma generate explicitly below, after the CLI is available.
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 # Copy compiled output from builder
@@ -66,20 +65,21 @@ COPY --from=builder /app/dist ./dist
 # we copy it to /app/prisma.config.js where the CLI expects it at runtime.
 COPY --from=builder /app/dist/prisma.config.js ./prisma.config.js
 
-# Copy Prisma schema + generated client from builder.
-# The schema is needed by `prisma migrate deploy` at startup.
-# The generated client is needed because prisma (devDep) is not
-# installed in this stage and therefore did not re-generate it.
-# Note: Prisma 7 with driver adapters generates the client entirely
-# into node_modules/@prisma/client — node_modules/.prisma is not created.
+# Copy Prisma schema — needed by both `prisma migrate deploy` and
+# `prisma generate` which run at build time below.
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
 # Copy the Prisma CLI from the builder so `prisma migrate deploy` in the
 # CMD does not rely on npx downloading it from npm at runtime.
 # prisma is a devDependency and is therefore absent from the prod install.
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+
+# Generate the Prisma Client into the pnpm virtual store.
+# pnpm's --ignore-scripts flag skipped the postinstall hook that normally
+# runs `prisma generate`. Without this step the generated files
+# (e.g. .prisma/client/default) are absent and the app crashes on startup.
+RUN node_modules/.bin/prisma generate
 
 # Run as non-root user for security
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
