@@ -35,6 +35,8 @@ export class SystemConfigRepository {
    */
   async findAll(): Promise<SystemConfigRecord[]> {
     const client = this.prisma as unknown as PrismaClient;
-    return client.systemConfig.findMany() as Promise<SystemConfigRecord[]>;
+    return client.systemConfig.findMany({ take: 500 }) as Promise<
+      SystemConfigRecord[]
+    >;
   }
 }

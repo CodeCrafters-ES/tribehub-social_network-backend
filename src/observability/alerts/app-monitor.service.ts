@@ -120,18 +120,19 @@ export class AppMonitorService implements OnModuleInit, OnModuleDestroy {
   }
 
   async runCheck(): Promise<void> {
-    await Promise.all([
-      this.check5xxRate(),
-      this.checkLatencyP95(),
-      this.checkMemory(),
-      this.checkRedisLatency(),
-    ]);
-  }
-
-  private async check5xxRate(): Promise<void> {
     const metricsJson =
       (await this.metricsService.registry.getMetricsAsJSON()) as MetricJson[];
 
+    await Promise.all([
+      this.check5xxRate(metricsJson),
+      this.checkLatencyP95(metricsJson),
+      this.checkRedisLatency(),
+    ]);
+
+    await this.checkMemory();
+  }
+
+  private async check5xxRate(metricsJson: MetricJson[]): Promise<void> {
     const requestsMetric = metricsJson.find(
       (m) => m.name === 'http_requests_total',
     );
@@ -179,10 +180,7 @@ export class AppMonitorService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async checkLatencyP95(): Promise<void> {
-    const metricsJson =
-      (await this.metricsService.registry.getMetricsAsJSON()) as MetricJson[];
-
+  private async checkLatencyP95(metricsJson: MetricJson[]): Promise<void> {
     const durationMetric = metricsJson.find(
       (m) => m.name === 'http_request_duration_seconds',
     );
