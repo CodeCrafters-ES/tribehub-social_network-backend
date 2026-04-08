@@ -94,30 +94,30 @@ describe('buildRedisClient', () => {
     );
   });
 
-  it('passes retryStrategy to the IORedis constructor', () => {
+  it('passes maxRetriesPerRequest: null to the IORedis constructor', () => {
     process.env.REDIS_URL = 'redis://localhost:6379';
     buildRedisClient();
     const opts = (MockRedis as ReturnType<typeof vi.fn>).mock.calls.at(
       -1,
     )?.[0] as Record<string, unknown>;
-    expect(typeof opts.retryStrategy).toBe('function');
+    expect(opts.maxRetriesPerRequest).toBeNull();
   });
 
-  it('retryStrategy returns null after 5 attempts', () => {
+  it('passes enableReadyCheck: false to the IORedis constructor', () => {
     process.env.REDIS_URL = 'redis://localhost:6379';
     buildRedisClient();
     const opts = (MockRedis as ReturnType<typeof vi.fn>).mock.calls.at(
       -1,
-    )?.[0] as { retryStrategy: (n: number) => number | null };
-    expect(opts.retryStrategy(6)).toBeNull();
+    )?.[0] as Record<string, unknown>;
+    expect(opts.enableReadyCheck).toBe(false);
   });
 
-  it('retryStrategy returns a delay for attempt 1', () => {
+  it('does not pass retryStrategy to the IORedis constructor', () => {
     process.env.REDIS_URL = 'redis://localhost:6379';
     buildRedisClient();
     const opts = (MockRedis as ReturnType<typeof vi.fn>).mock.calls.at(
       -1,
-    )?.[0] as { retryStrategy: (n: number) => number | null };
-    expect(opts.retryStrategy(1)).toBe(500);
+    )?.[0] as Record<string, unknown>;
+    expect(opts.retryStrategy).toBeUndefined();
   });
 });
