@@ -33,6 +33,7 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy {
     collectDefaultMetrics({
       register: this.registry,
       labels: { environment },
+      collectInterval: 60_000,
     });
 
     // --- HTTP request counter ---
