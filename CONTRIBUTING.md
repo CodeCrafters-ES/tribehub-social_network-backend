@@ -7,8 +7,8 @@
 - Node.js >= 20.x
 - pnpm >= 9.x
 - Git
-- Docker (para Redis local)
-- Cuenta de Supabase
+- Docker (para PostgreSQL y Redis locales)
+- Cuenta de Supabase (plan gratuito es suficiente)
 
 ---
 
@@ -22,13 +22,25 @@ cd tribehub-social_network-backend
 pnpm install
 ```
 
-### 2. Variables de entorno
+### 2. Crear proyecto Supabase propio
+
+Cada colaborador usa su propio proyecto Supabase — nunca se comparten las credenciales de staging o producción.
+
+1. Crea una cuenta gratuita en [supabase.com](https://supabase.com) si no tienes una.
+2. Crea un nuevo proyecto (el plan gratuito es suficiente).
+3. Ve a **Settings → API** y copia los valores de:
+   - `Project URL` → `SUPABASE_URL`
+   - `anon public` → `SUPABASE_ANON_KEY`
+   - `service_role` → `SUPABASE_SERVICE_ROLE_KEY`
+4. Ve a **Settings → JWT Settings** y copia el valor de `JWT Secret` → `SUPABASE_JWT_SECRET`.
+
+### 3. Variables de entorno
 
 ```bash
-cp .env.example .env.development
+cp -i .env.example .env.development
 ```
 
-Edita `.env` con tus credenciales. Variables mínimas para desarrollo:
+Edita `.env.development` con tus credenciales. Variables mínimas para desarrollo:
 
 ```env
 PORT=3000
@@ -37,8 +49,8 @@ SUPABASE_URL=https://tu-proyecto.supabase.co
 SUPABASE_ANON_KEY=tu-anon-key
 SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key
 SUPABASE_JWT_SECRET=tu-jwt-secret
-JWT_SECRET=tu-jwt-secret-interno
-DATABASE_URL=postgresql://usuario:password@localhost:5432/tribehub_db
+JWT_SECRET=cualquier-string-aleatorio-32-chars  # genera con: openssl rand -hex 32
+DATABASE_URL=postgresql://tribehub:tribehub@localhost:5432/tribehub_dev
 REDIS_URL=redis://localhost:6379
 FRONTEND_URL=http://localhost:5173
 METRICS_USER=metrics_user
@@ -46,7 +58,32 @@ METRICS_PASS=metrics_pass_changeme
 METRICS_PATH_SECRET=_internal_metrics_local
 ```
 
-### 3. Aplicar migraciones de base de datos
+### 4. Levantar dependencias locales con Docker
+
+```bash
+docker compose up -d
+```
+
+Esto levanta PostgreSQL 16 y Redis con los mismos valores que el `DATABASE_URL` del paso anterior. Los contenedores se reinician automáticamente al arrancar el sistema (`restart: unless-stopped`).
+
+Para pararlos: `docker compose down`. Para pararlos y borrar los datos persistidos: `docker compose down -v`.
+
+> **Sin Docker Compose** — puedes levantar cada servicio por separado con `docker run`:
+>
+> ```bash
+> # PostgreSQL
+> docker run -d --name tribehub-db \
+>   -e POSTGRES_USER=tribehub \
+>   -e POSTGRES_PASSWORD=tribehub \
+>   -e POSTGRES_DB=tribehub_dev \
+>   -p 5432:5432 \
+>   postgres:16-alpine
+>
+> # Redis
+> docker run -d --name tribehub-redis -p 6379:6379 redis:alpine
+> ```
+
+### 5. Aplicar migraciones de base de datos
 
 ```bash
 npx prisma migrate dev
@@ -54,13 +91,7 @@ npx prisma migrate dev
 
 Sin este paso la app arranca pero todas las queries a la base de datos fallan.
 
-### 4. Arrancar Redis local
-
-```bash
-docker run -d --name redis-tribehub -p 6379:6379 redis:alpine
-```
-
-### 5. Arrancar el servidor
+### 6. Arrancar el servidor
 
 ```bash
 pnpm run start:dev
