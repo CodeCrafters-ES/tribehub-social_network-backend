@@ -60,6 +60,12 @@ RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 # Copy compiled output from builder
 COPY --from=builder /app/dist ./dist
 
+# Copy the compiled Prisma config to the project root.
+# prisma.config.ts defines datasource.url and is used by the Prisma CLI
+# (migrate deploy). It is compiled to dist/prisma.config.js by nest build;
+# we copy it to /app/prisma.config.js where the CLI expects it at runtime.
+COPY --from=builder /app/dist/prisma.config.js ./prisma.config.js
+
 # Copy Prisma schema + generated client from builder.
 # The schema is needed by `prisma migrate deploy` at startup.
 # The generated client is needed because prisma (devDep) is not
