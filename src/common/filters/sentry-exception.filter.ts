@@ -26,11 +26,12 @@ export class SentryExceptionFilter implements ExceptionFilter {
         scope.setContext('request', { requestId });
         Sentry.captureException(exception);
       });
+      this.logger.error(`[DEBUG] type=${typeof exception} | isError=${exception instanceof Error} | constructor=${(exception as any)?.constructor?.name} | requestId=${requestId}`);
+      this.logger.error(`[DEBUG] message=${(exception as any)?.message} | status=${(exception as any)?.status} | code=${(exception as any)?.code}`);
       this.logger.error(
         `Unhandled exception captured by Sentry — requestId=${requestId}`,
-        exception instanceof Error ? exception.stack : JSON.stringify(exception),
+        exception instanceof Error ? exception.stack : String((exception as any)?.message ?? exception),
       );
-      console.error('[DEBUG] exception type:', typeof exception, '| isError:', exception instanceof Error, '| value:', JSON.stringify(exception));
     }
 
     if (isHttpException) {
