@@ -36,6 +36,12 @@ export function getSupabaseClient(): SupabaseClient {
     throw new Error('Missing required environment variable: SUPABASE_ANON_KEY');
   }
 
+  console.log('[DEBUG] SUPABASE_URL:', SUPABASE_URL);
+  console.log(
+    '[DEBUG] SUPABASE_ANON_KEY prefix:',
+    SUPABASE_ANON_KEY.slice(0, 20) + '...',
+  );
+
   instance = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     // Disable the Realtime subscription manager entirely — the backend never
     // subscribes to database changes via this client, and the underlying

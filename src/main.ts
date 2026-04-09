@@ -1,6 +1,6 @@
 import './instrument';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
 import * as cookieParser from 'cookie-parser';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -36,11 +36,10 @@ async function bootstrap() {
             errors: constraints,
           };
         });
-        return {
-          statusCode: 400,
+        return new BadRequestException({
           message: 'Errores de validación',
           errors: messages,
-        };
+        });
       },
     }),
   );
