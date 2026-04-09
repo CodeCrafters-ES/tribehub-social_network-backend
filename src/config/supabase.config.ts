@@ -37,7 +37,10 @@ export function getSupabaseClient(): SupabaseClient {
   }
 
   console.log('[DEBUG] SUPABASE_URL:', SUPABASE_URL);
-  console.log('[DEBUG] SUPABASE_ANON_KEY prefix:', SUPABASE_ANON_KEY.slice(0, 20) + '...');
+  console.log(
+    '[DEBUG] SUPABASE_ANON_KEY prefix:',
+    SUPABASE_ANON_KEY.slice(0, 20) + '...',
+  );
 
   instance = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     // Disable the Realtime subscription manager entirely — the backend never
