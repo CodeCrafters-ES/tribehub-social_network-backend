@@ -30,6 +30,7 @@ export class SentryExceptionFilter implements ExceptionFilter {
         `Unhandled exception captured by Sentry — requestId=${requestId}`,
         exception instanceof Error ? exception.stack : JSON.stringify(exception),
       );
+      console.error('[DEBUG] exception type:', typeof exception, '| isError:', exception instanceof Error, '| value:', JSON.stringify(exception));
     }
 
     if (isHttpException) {
