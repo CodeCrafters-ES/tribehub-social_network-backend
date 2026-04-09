@@ -28,13 +28,21 @@ export class SentryExceptionFilter implements ExceptionFilter {
       });
       this.logger.error(
         `Unhandled exception captured by Sentry — requestId=${requestId}`,
-        exception instanceof Error ? exception.stack : String(exception),
+        exception instanceof Error ? exception.stack : JSON.stringify(exception),
       );
     }
 
     if (isHttpException) {
       const responseBody = exception.getResponse();
       response.status(status).json(responseBody);
+    } else if (
+      typeof exception === 'object' &&
+      exception !== null &&
+      'statusCode' in exception &&
+      typeof (exception as Record<string, unknown>).statusCode === 'number'
+    ) {
+      const obj = exception as Record<string, unknown>;
+      response.status(obj.statusCode as number).json(obj);
     } else {
       response.status(500).json({
         statusCode: 500,
