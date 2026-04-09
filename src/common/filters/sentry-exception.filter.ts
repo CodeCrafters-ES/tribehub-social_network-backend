@@ -50,7 +50,7 @@ export class SentryExceptionFilter implements ExceptionFilter {
     } else {
       response.status(500).json({
         statusCode: 500,
-        message: 'Internal server error',
+        message: 'Internal server error [v2]',
       });
     }
   }
