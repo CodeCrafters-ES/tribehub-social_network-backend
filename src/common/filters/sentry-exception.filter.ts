@@ -28,7 +28,9 @@ export class SentryExceptionFilter implements ExceptionFilter {
       });
       this.logger.error(
         `Unhandled exception captured by Sentry — requestId=${requestId}`,
-        exception instanceof Error ? exception.stack : String((exception as any)?.message ?? exception),
+        exception instanceof Error
+          ? exception.stack
+          : String((exception as any)?.message ?? exception),
       );
     }
 
