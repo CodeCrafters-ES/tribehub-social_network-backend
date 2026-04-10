@@ -10,8 +10,6 @@ import { Request } from 'express';
 import { verify, type JwtPayload } from 'jsonwebtoken';
 import { SecurityMonitorService } from '../../observability/alerts/security-monitor.service';
 
-const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
-
 type AuthenticatedRequest = Request & {
   supabaseUser: JwtPayload;
   supabaseToken: string;
@@ -22,6 +20,7 @@ export class SupabaseAuthGuard implements CanActivate {
   constructor(private readonly securityMonitor: SecurityMonitorService) {}
 
   canActivate(context: ExecutionContext): boolean {
+    const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const authHeader = request.headers['authorization'];
 
