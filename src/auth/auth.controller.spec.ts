@@ -59,11 +59,18 @@ describe('AuthController', () => {
 
   it('should login a user', async () => {
     const dto: LoginDto = { email: 'test@gmail.com', password: 'password123' };
-    (service.login as Mock).mockResolvedValue({ session: 'session-token' });
+    (service.login as Mock).mockResolvedValue({
+      session: { access_token: 'access-jwt', refresh_token: 'refresh-jwt' },
+      user: { id: 'user-id', email: 'test@gmail.com' },
+    });
 
     const result = await controller.login(dto);
     expect(result.success).toBe(true);
-    expect(result.data).toEqual({ session: 'session-token' });
+    expect(result.data).toEqual({
+      accessToken: 'access-jwt',
+      refreshToken: 'refresh-jwt',
+      user: { id: 'user-id', email: 'test@gmail.com' },
+    });
   });
 
   it('should handle login error', async () => {
