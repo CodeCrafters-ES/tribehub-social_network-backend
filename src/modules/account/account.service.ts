@@ -1,8 +1,8 @@
-import { 
-  Injectable, 
+import {
+  Injectable,
   UnauthorizedException,
   BadRequestException,
-  NotFoundException
+  NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DeleteAccountConfirmDto } from './dto/delete-account-confirm.dto';
@@ -19,9 +19,9 @@ export class AccountService {
 
     // Invalidate prior requests to prevent token accumulation
     await this.prisma.deleteAccountRequest.updateMany({
-      where: { 
-        userId: userId, 
-        usedAt: null 
+      where: {
+        userId: userId,
+        usedAt: null,
       },
       data: {
         usedAt: new Date(),
@@ -53,21 +53,27 @@ export class AccountService {
     const now = new Date();
 
     if (deleteRequest.userId !== userId) {
-      throw new UnauthorizedException('No tienes permiso para confirmar esta solicitud');
+      throw new UnauthorizedException(
+        'No tienes permiso para confirmar esta solicitud',
+      );
     }
 
     if (deleteRequest.usedAt !== null) {
-      throw new BadRequestException('Esta solicitud ya ha sido procesada o invalidada');
+      throw new BadRequestException(
+        'Esta solicitud ya ha sido procesada o invalidada',
+      );
     }
 
     if (deleteRequest.expiresAt && deleteRequest.expiresAt < now) {
-      throw new BadRequestException('La solicitud ha expirado. Por favor, solicita una nueva');
+      throw new BadRequestException(
+        'La solicitud ha expirado. Por favor, solicita una nueva',
+      );
     }
 
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
-    
+
     if (!user || !user.passwordHash) {
       throw new UnauthorizedException('Credenciales inválidas');
     }

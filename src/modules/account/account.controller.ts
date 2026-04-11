@@ -1,4 +1,12 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { AccountService } from './account.service';
 import { DeleteAccountConfirmDto } from './dto/delete-account-confirm.dto';
 import { SupabaseAuthGuard } from '../../auth/guards/supabase-auth.guard';
