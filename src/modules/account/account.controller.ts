@@ -5,16 +5,22 @@ import { SupabaseAuthGuard } from '../../auth/guards/supabase-auth.guard';
 
 @Controller('account')
 export class AccountController {
-  
   constructor(private readonly accountService: AccountService) {}
+
+  @UseGuards(SupabaseAuthGuard)
+  @Post('delete/request')
+  @HttpCode(HttpStatus.OK)
+  async requestDelete(@Req() req: any) {
+    const userId = req.supabaseUser.sub;
+    return await this.accountService.createDeleteRequest(userId);
+  }
 
   @UseGuards(SupabaseAuthGuard)
   @Post('delete/confirm')
   @HttpCode(HttpStatus.OK)
   async confirmDelete(@Req() req: any, @Body() body: DeleteAccountConfirmDto) {
-    const userId = req.supabaseUser.sub; 
+    const userId = req.supabaseUser.sub;
     await this.accountService.confirmDeleteRequest(body, userId);
-    
-    return { ok: true }; 
+    return { ok: true };
   }
 }

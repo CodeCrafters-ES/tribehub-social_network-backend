@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { 
+  Injectable, 
+  UnauthorizedException,
+  BadRequestException,
+  NotFoundException
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DeleteAccountConfirmDto } from './dto/delete-account-confirm.dto';
 import * as argon2 from 'argon2';
@@ -7,7 +12,58 @@ import * as argon2 from 'argon2';
 export class AccountService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async createDeleteRequest(userId: string) {
+    const EXPIRES_IN_SECONDS = 900; //15 minutes
+    const expiresAt = new Date();
+    expiresAt.setSeconds(expiresAt.getSeconds() + EXPIRES_IN_SECONDS);
+
+    // Invalidate prior requests to prevent token accumulation
+    await this.prisma.deleteAccountRequest.updateMany({
+      where: { 
+        userId: userId, 
+        usedAt: null 
+      },
+      data: {
+        usedAt: new Date(),
+      },
+    });
+
+    const newRequest = await this.prisma.deleteAccountRequest.create({
+      data: {
+        userId: userId,
+        expiresAt: expiresAt,
+      },
+    });
+
+    return {
+      deleteRequestId: newRequest.id,
+      expiresIn: EXPIRES_IN_SECONDS,
+    };
+  }
+
   async confirmDeleteRequest(data: DeleteAccountConfirmDto, userId: string) {
+    const deleteRequest = await this.prisma.deleteAccountRequest.findUnique({
+      where: { id: data.deleteRequestId },
+    });
+
+    if (!deleteRequest) {
+      throw new NotFoundException('Solicitud de eliminación no encontrada');
+    }
+
+    const now = new Date();
+
+    if (deleteRequest.userId !== userId) {
+      throw new UnauthorizedException('No tienes permiso para confirmar esta solicitud');
+    }
+
+    if (deleteRequest.usedAt !== null) {
+      throw new BadRequestException('Esta solicitud ya ha sido procesada o invalidada');
+    }
+
+    if (deleteRequest.expiresAt && deleteRequest.expiresAt < now) {
+      throw new BadRequestException('La solicitud ha expirado. Por favor, solicita una nueva');
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -24,6 +80,12 @@ export class AccountService {
     if (!isPasswordValid) {
       throw new UnauthorizedException('Contraseña incorrecta');
     }
+
+    // Mark the delete request as used to prevent reuse
+    await this.prisma.deleteAccountRequest.update({
+      where: { id: data.deleteRequestId },
+      data: { usedAt: new Date() },
+    });
 
     return true;
   }

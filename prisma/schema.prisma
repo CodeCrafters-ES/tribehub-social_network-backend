@@ -51,6 +51,7 @@ model User {
   comments      Comment[]
   reactions     Reaction[]
   refreshTokens RefreshToken[]
+  deleteRequests DeleteAccountRequest[]
 
   @@map("users")
 }
@@ -226,4 +227,17 @@ enum ReactionType {
   WOW
   SAD
   ANGRY
+}
+
+model DeleteAccountRequest {
+  id        String    @id @default(uuid())
+  userId    String
+  usedAt    DateTime? // null = no usado; fecha = ya se usó para borrar
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  // Relaciones
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("delete_account_requests")
 }
