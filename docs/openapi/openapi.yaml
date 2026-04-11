@@ -153,6 +153,73 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /account/delete/request:
+    post:
+      operationId: requestDelete
+      summary: Request account deletion
+      description: Initiates the soft delete flow by generating a challenge token.
+      tags:
+        - Account
+      security:
+        - BearerAuth: []
+      responses:
+        '201': 
+          description: Request created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleteRequestId:
+                    type: string
+                    format: uuid
+                    example: "123e4567-e89b-12d3-a456-426614174000"
+                  expiresIn:
+                    type: integer
+                    example: 900
+        '401':
+          description: Unauthorized (Invalid or missing token).
+
+  /account/delete/confirm:
+    post:
+      operationId: confirmDelete
+      summary: Confirm account deletion
+      description: Validates the challenge and password to execute the deletion.
+      tags:
+        - Account
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - deleteRequestId
+                - password
+              properties:
+                deleteRequestId:
+                  type: string
+                  format: uuid
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Deletion confirmed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '400':
+          description: Invalid, expired, or already processed request.
+        '401':
+          description: Incorrect password or unauthorized user.
+
 components:
   securitySchemes:
     BearerAuth:
