@@ -9,7 +9,7 @@ export class RegisterRequestDto {
   })
   @IsEmail()
   @IsNotEmpty({ message: 'Campo email no debe ir vacío' })
-  email: string;
+  email!: string;
 
   @ApiProperty({
     description: 'Unique username (no spaces allowed)',
@@ -17,7 +17,7 @@ export class RegisterRequestDto {
   })
   @IsNotEmpty({ message: 'Nombre de usuario no debe ir vacío' })
   @NoSpaces({ always: true, message: 'No debe tener espacio(s)' })
-  username: string;
+  username!: string;
 
   @ApiProperty({
     description:
@@ -31,5 +31,5 @@ export class RegisterRequestDto {
     minNumbers: 1,
     minSymbols: 1,
   })
-  password: string;
+  password!: string;
 }
