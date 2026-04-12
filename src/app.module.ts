@@ -16,6 +16,7 @@ import { FeedModule } from './modules/feed/feed.module';
 import { SearchModule } from './modules/search/search.module';
 import { QueuesModule } from './queues/queues.module';
 import { BullboardModule } from './admin/queues/bullboard.module';
+import { ProfileModule } from './modules/profile/profile.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { BullboardModule } from './admin/queues/bullboard.module';
     SearchModule,
     QueuesModule,
     BullboardModule,
+    ProfileModule,
   ],
   controllers: [AppController],
   providers: [
