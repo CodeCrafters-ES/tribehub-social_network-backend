@@ -107,6 +107,62 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /profile/me:
+    get:
+      operationId: getMyProfile
+      summary: Get current user profile
+      tags:
+        - Profile
+      responses:
+        '200':
+          description: Profile returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      operationId: updateMyProfile
+      summary: Update current user profile
+      tags:
+        - Profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /auth/refresh:
     post:
       operationId: refreshToken
@@ -204,7 +260,7 @@ components:
       properties:
         accessToken:
           type: string
-          description: "Short-lived JWT access token (Authorization: Bearer)"
+          description: 'Short-lived JWT access token (Authorization: Bearer)'
           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         refreshToken:
           type: string
@@ -245,3 +301,67 @@ components:
                 type: string
               message:
                 type: string
+
+    Profile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Profile ID
+          example: 550e8400-e29b-41d4-a716-446655440000
+        userId:
+          type: string
+          format: uuid
+          description: User ID
+          example: 550e8400-e29b-41d4-a716-446655440000
+        displayName:
+          type: string
+          description: Display name (nombre visible)
+          example: Alex García
+        bio:
+          type: string
+          description: Short bio
+          nullable: true
+          example: Hola, soy Alex!
+        avatarUrl:
+          type: string
+          description: Avatar URL
+          nullable: true
+          example: https://cdn.tribehub.app/avatars/user_123/avatar.png
+        isPublic:
+          type: boolean
+          description: Whether profile is public
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          example: 2024-01-01T00:00:00.000Z
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2024-01-01T00:00:00.000Z
+
+    UpdateProfileRequest:
+      type: object
+      required:
+        - displayName
+      properties:
+        displayName:
+          type: string
+          minLength: 2
+          maxLength: 50
+          description: Display name (nombre visible)
+          example: Alex García
+        bio:
+          type: string
+          maxLength: 160
+          description: Short bio (optional)
+          nullable: true
+          example: Hola, soy Alex!
+        avatarUrl:
+          type: string
+          format: uri
+          description: Avatar URL (optional)
+          nullable: true
+          example: https://cdn.tribehub.app/avatars/user_123/avatar.png
