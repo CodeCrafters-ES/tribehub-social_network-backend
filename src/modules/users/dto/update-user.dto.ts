@@ -1,4 +1,4 @@
-// src/auth/dto/update-user.dto.ts
+// src/modules/users/dto/update-user.dto.ts
 
 import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 
