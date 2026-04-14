@@ -13,6 +13,7 @@
 import {
   Injectable,
   Logger,
+  OnApplicationShutdown,
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
@@ -27,7 +28,9 @@ import type {
 const WORKER_CONCURRENCY = 5;
 
 @Injectable()
-export class DefaultWorker implements OnModuleInit, OnModuleDestroy {
+export class DefaultWorker
+  implements OnModuleInit, OnModuleDestroy, OnApplicationShutdown
+{
   private readonly logger = new Logger(DefaultWorker.name);
   private worker: Worker | null = null;
 
@@ -89,6 +92,24 @@ export class DefaultWorker implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
+    await this.close();
+  }
+
+  /**
+   * Called when the application is shutting down. This runs BEFORE
+   * Redis connections are closed, ensuring the worker closes gracefully
+   * without triggering "Connection is closed" errors.
+   */
+  async onApplicationShutdown(): Promise<void> {
+    this.logger.log({
+      event: 'worker.shutdown',
+      queueName: QUEUE_NAMES.DEFAULT,
+    });
+    await this.close();
+  }
+
+  /** Closes the worker gracefully. Use this in tests to prevent teardown errors. */
+  async close(): Promise<void> {
     if (this.worker) {
       this.worker.removeAllListeners();
       await this.worker.close();
