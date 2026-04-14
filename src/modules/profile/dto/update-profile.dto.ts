@@ -19,6 +19,7 @@ import { Transform } from 'class-transformer';
  * - avatarUrl: optional, valid URL
  */
 export class UpdateProfileDto {
+  @IsOptional()
   @IsString()
   @MinLength(2, {
     message: 'Display name must be at least 2 characters',
@@ -27,7 +28,7 @@ export class UpdateProfileDto {
     message: 'Display name must be at most 50 characters',
   })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
-  displayName: string;
+  displayName?: string;
 
   @IsOptional()
   @IsString()

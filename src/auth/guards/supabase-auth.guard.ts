@@ -4,18 +4,22 @@ import {
   CanActivate,
   ExecutionContext,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
-import * as jwt from 'jsonwebtoken';
+import * as jsonwebtoken from 'jsonwebtoken';
+import type { JwtPayload } from 'jsonwebtoken';
 import jwksRsa from 'jwks-rsa';
 import type { JwksClient } from 'jwks-rsa';
 import { SecurityMonitorService } from '../../observability/alerts/security-monitor.service';
-import { PrismaService } from '../../prisma/prisma.service';
+import { UsersRepository } from '../../modules/users/repositories/users.repository';
+
+const jwt = jsonwebtoken;
 
 type AuthenticatedRequest = Request & {
-  supabaseUser: jwt.JwtPayload;
+  supabaseUser: JwtPayload;
   supabaseToken: string;
   /** Internal user ID from public.users table */
   userId?: string;
@@ -23,12 +27,13 @@ type AuthenticatedRequest = Request & {
 
 @Injectable()
 export class SupabaseAuthGuard implements CanActivate {
+  private readonly logger = new Logger(SupabaseAuthGuard.name);
   private readonly jwksClient: JwksClient;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly securityMonitor: SecurityMonitorService,
-    private readonly prisma: PrismaService,
+    private readonly usersRepository: UsersRepository,
   ) {
     // Initialize JWKS client for ES256 tokens from Supabase
     const supabaseUrl = this.configService.getOrThrow<string>('SUPABASE_URL');
@@ -56,7 +61,7 @@ export class SupabaseAuthGuard implements CanActivate {
       throw new UnauthorizedException('Missing token');
     }
 
-    // Validate Supabase ES256 JWT using JWKS
+    // Validate Supabase ES256 JWT using JWKS (asymmetric - modern secure method)
     try {
       // First, decode the token header to get the key ID (kid)
       const decodedHeader = jwt.decode(token, { complete: true });
@@ -65,6 +70,8 @@ export class SupabaseAuthGuard implements CanActivate {
       }
 
       const header = decodedHeader.header as { kid?: string; alg?: string };
+
+      // ES256: Use JWKS (asymmetric - no legacy JWT_SECRET needed)
       if (!header.kid) {
         throw new UnauthorizedException('Token missing key ID');
       }
@@ -80,7 +87,7 @@ export class SupabaseAuthGuard implements CanActivate {
       // Verify the token with the public key
       const payload = jwt.verify(token, publicKey, {
         algorithms: ['ES256'],
-      }) as jwt.JwtPayload;
+      }) as jsonwebtoken.JwtPayload;
 
       // Sync Supabase user to public.users if not exists
       const internalUserId = await this.syncUserToPublicTable(payload);
@@ -114,7 +121,7 @@ export class SupabaseAuthGuard implements CanActivate {
    * Returns the internal user ID.
    */
   private async syncUserToPublicTable(
-    payload: jwt.JwtPayload,
+    payload: JwtPayload,
   ): Promise<string | undefined> {
     const supabaseId = payload.sub as string;
     const email = payload.email as string;
@@ -124,30 +131,11 @@ export class SupabaseAuthGuard implements CanActivate {
     }
 
     try {
-      const username =
-        (payload.user_metadata?.username as string) ||
-        email.split('@')[0] ||
-        `user_${supabaseId.slice(0, 8)}`;
-
-      // Use Prisma's upsert directly
-      const result = await this.prisma.user.upsert({
-        where: { supabaseId },
-        create: {
-          supabaseId,
-          email,
-          username,
-          status: 'ACTIVE',
-        },
-        update: {
-          email,
-        },
-      });
-
-      return result.id;
+      return await this.usersRepository.ensureUserExists(supabaseId, email);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
-      console.warn(`User sync failed for ${supabaseId}: ${errorMessage}`);
+      this.logger.warn(`User sync failed for ${supabaseId}: ${errorMessage}`);
       return undefined;
     }
   }

@@ -65,7 +65,3 @@ package-lock.json
 # git add .github/workflows/claude.yml
 # git commit -m "chore: add Claude Code GitHub Actions workflow"
 openspec/*
-<<<<<<< HEAD
-pnpm-lock.yaml
-=======
->>>>>>> origin/feat/p01-05-onboarding-perfil-base
