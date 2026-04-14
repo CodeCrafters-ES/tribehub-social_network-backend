@@ -8,7 +8,12 @@
 //   - removeOnComplete: keep last 100 for debugging
 //   - removeOnFail: keep last 500 for post-mortem inspection via BullBoard
 
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnApplicationShutdown,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { JOB_TYPES, QUEUE_NAMES } from './queues.constants';
 import { buildRedisClient } from './redis.connection';
@@ -27,7 +32,7 @@ export interface ProcessImagePayload {
 type JobPayload = SendWelcomeEmailPayload | ProcessImagePayload;
 
 @Injectable()
-export class QueueService implements OnModuleDestroy {
+export class QueueService implements OnModuleDestroy, OnApplicationShutdown {
   private readonly logger = new Logger(QueueService.name);
   readonly queue: Queue;
 
@@ -58,6 +63,24 @@ export class QueueService implements OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
+    await this.close();
+  }
+
+  /**
+   * Called when the application is shutting down. This runs BEFORE
+   * Redis connections are closed, ensuring the queue closes gracefully
+   * without triggering "Connection is closed" errors.
+   */
+  async onApplicationShutdown(): Promise<void> {
+    this.logger.log({
+      event: 'queue.shutdown',
+      queueName: QUEUE_NAMES.DEFAULT,
+    });
+    await this.close();
+  }
+
+  /** Closes the queue gracefully. */
+  private async close(): Promise<void> {
     this.queue.removeAllListeners();
     await this.queue.close();
   }

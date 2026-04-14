@@ -84,7 +84,7 @@ export class SupabaseAuthGuard implements CanActivate {
 
       // Sync Supabase user to public.users if not exists
       const internalUserId = await this.syncUserToPublicTable(payload);
-      (request as AuthenticatedRequest).userId = internalUserId;
+      request.userId = internalUserId;
 
       request.supabaseUser = payload;
       request.supabaseToken = token;
