@@ -42,7 +42,12 @@ export class ProfileService {
     const existing = await this.profileRepository.findByUserId(userId);
 
     if (!existing) {
-      // Create initial profile (onboarding)
+      // Create initial profile (onboarding) - displayName is required
+      if (!dto.displayName) {
+        throw new NotFoundException(
+          'Profile not found. displayName is required for onboarding.',
+        );
+      }
       const profile = await this.profileRepository.upsert(userId, {
         displayName: dto.displayName,
         bio: dto.bio ?? null,
