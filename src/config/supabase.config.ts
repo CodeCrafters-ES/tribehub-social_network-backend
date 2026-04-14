@@ -20,6 +20,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 let instance: SupabaseClient | null = null;
+let adminInstance: SupabaseClient | null = null;
 
 export function getSupabaseClient(): SupabaseClient {
   if (instance) {
@@ -47,9 +48,48 @@ export function getSupabaseClient(): SupabaseClient {
 }
 
 /**
- * Resets the singleton. Intended for use in unit tests only — production code
+ * Returns a Supabase client initialised with the service-role key.
+ * This client bypasses Row Level Security and has admin privileges —
+ * use only for server-side operations that require elevated access
+ * (e.g. auth.admin.deleteUser during registration rollback).
+ *
+ * Never expose this client or its key to untrusted callers.
+ */
+export function getSupabaseAdminClient(): SupabaseClient {
+  if (adminInstance) {
+    return adminInstance;
+  }
+
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!SUPABASE_URL) {
+    throw new Error('Missing required environment variable: SUPABASE_URL');
+  }
+  if (!SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error(
+      'Missing required environment variable: SUPABASE_SERVICE_ROLE_KEY',
+    );
+  }
+
+  adminInstance = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: {
+      // Disable automatic session persistence — the admin client is used for
+      // one-off server-side operations and must never store session state.
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+    realtime: { params: { eventsPerSecond: -1 } },
+  });
+
+  return adminInstance;
+}
+
+/**
+ * Resets the singletons. Intended for use in unit tests only — production code
  * must never call this function.
  */
 export function _resetSupabaseClientForTesting(): void {
   instance = null;
+  adminInstance = null;
 }

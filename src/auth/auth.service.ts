@@ -11,7 +11,10 @@ import { createHash } from 'crypto';
 
 import { RegisterRequestDto } from './dto/register.request.dto';
 import { LoginDto } from './dto/login.dto';
-import { getSupabaseClient } from '../config/supabase.config';
+import {
+  getSupabaseClient,
+  getSupabaseAdminClient,
+} from '../config/supabase.config';
 import { UsersRepository } from '../modules/users/repositories/users.repository';
 import {
   AuthRepository,
@@ -80,6 +83,32 @@ export class AuthService {
         createdAt: user.createdAt,
       };
     } catch (err: unknown) {
+      // The Supabase user was already created above. Roll it back so we do not
+      // leave an orphaned Supabase user with no local DB counterpart.
+      if (supabaseUserId) {
+        try {
+          const supabaseAdmin = getSupabaseAdminClient();
+          const { error: deleteError } =
+            await supabaseAdmin.auth.admin.deleteUser(supabaseUserId);
+          if (deleteError) {
+            this.logger.warn({
+              event: 'auth.register.supabase_rollback_failed',
+              supabaseUserId,
+              reason: deleteError.message,
+            });
+          }
+        } catch (rollbackErr: unknown) {
+          this.logger.warn({
+            event: 'auth.register.supabase_rollback_error',
+            supabaseUserId,
+            reason:
+              rollbackErr instanceof Error
+                ? rollbackErr.message
+                : 'Unknown error',
+          });
+        }
+      }
+
       // Map Prisma unique constraint violation to ConflictException
       if (
         typeof err === 'object' &&

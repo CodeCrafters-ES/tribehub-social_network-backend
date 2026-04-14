@@ -68,7 +68,11 @@ export class AuthController {
       const result = await this.authService.login(dto);
       return {
         success: true,
-        data: result,
+        data: {
+          accessToken: result.session?.access_token ?? null,
+          refreshToken: result.session?.refresh_token ?? null,
+          user: result.user ?? null,
+        },
         message: 'Login successful',
       };
     } catch (error) {
