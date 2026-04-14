@@ -59,6 +59,7 @@ function applyGlobalSetup(app: INestApplication): void {
           };
         });
         return new BadRequestException({
+          statusCode: 400,
           message: 'Errores de validación',
           errors: messages,
         });
@@ -276,7 +277,7 @@ describe('POST /api/v1/auth/register (e2e)', () => {
 
     expect(response.body).toMatchObject({
       statusCode: 400,
-      message: expect.objectContaining({ code: 'REGISTER_ERROR' }),
+      code: 'REGISTER_ERROR',
     });
   });
 
