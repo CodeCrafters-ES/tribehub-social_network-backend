@@ -59,7 +59,10 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # npm lockfile (project uses pnpm)
 package-lock.json
+
+# Artefactos generados por swagger-cli / Spectral (OpenAPI bundle)
 openspec/*
+
 .github/workflows/claude.yml
 # Si luego se quiere añadir:
 # git add .github/workflows/claude.yml
