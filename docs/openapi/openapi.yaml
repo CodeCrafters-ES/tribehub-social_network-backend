@@ -163,7 +163,7 @@ paths:
       security:
         - BearerAuth: []
       responses:
-        '201': 
+        '200': 
           description: Request created successfully.
           content:
             application/json:

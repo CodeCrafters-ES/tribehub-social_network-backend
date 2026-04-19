@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { AccountService } from './account.service';
 import { DeleteAccountConfirmDto } from './dto/delete-account-confirm.dto';
-import { SupabaseAuthGuard } from '../../auth/guards/supabase-auth.guard';
+import { SupabaseAuthGuard, AuthenticatedRequest } from '../../auth/guards/supabase-auth.guard';
 
 @Controller('account')
 export class AccountController {
@@ -18,7 +18,7 @@ export class AccountController {
   @UseGuards(SupabaseAuthGuard)
   @Post('delete/request')
   @HttpCode(HttpStatus.OK)
-  async requestDelete(@Req() req: any) {
+  async requestDelete(@Req() req: AuthenticatedRequest) {
     const userId = req.supabaseUser.sub;
     return await this.accountService.createDeleteRequest(userId);
   }
@@ -26,7 +26,7 @@ export class AccountController {
   @UseGuards(SupabaseAuthGuard)
   @Post('delete/confirm')
   @HttpCode(HttpStatus.OK)
-  async confirmDelete(@Req() req: any, @Body() body: DeleteAccountConfirmDto) {
+  async confirmDelete(@Req() req: AuthenticatedRequest, @Body() body: DeleteAccountConfirmDto) {
     const userId = req.supabaseUser.sub;
     await this.accountService.confirmDeleteRequest(body, userId);
     return { ok: true };

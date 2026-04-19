@@ -10,7 +10,7 @@ import { Request } from 'express';
 import { verify, type JwtPayload } from 'jsonwebtoken';
 import { SecurityMonitorService } from '../../observability/alerts/security-monitor.service';
 
-type AuthenticatedRequest = Request & {
+export type AuthenticatedRequest = Request & {
   supabaseUser: JwtPayload;
   supabaseToken: string;
 };

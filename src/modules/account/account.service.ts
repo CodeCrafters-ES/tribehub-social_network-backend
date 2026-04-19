@@ -44,6 +44,7 @@ export class AccountService {
   async confirmDeleteRequest(data: DeleteAccountConfirmDto, userId: string) {
     const deleteRequest = await this.prisma.deleteAccountRequest.findUnique({
       where: { id: data.deleteRequestId },
+      include: { user: true },
     });
 
     if (!deleteRequest) {
@@ -64,15 +65,13 @@ export class AccountService {
       );
     }
 
-    if (deleteRequest.expiresAt && deleteRequest.expiresAt < now) {
+    if (deleteRequest.expiresAt < now) {
       throw new BadRequestException(
         'La solicitud ha expirado. Por favor, solicita una nueva',
       );
     }
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
+    const user = deleteRequest.user;
 
     if (!user || !user.passwordHash) {
       throw new UnauthorizedException('Credenciales inválidas');
