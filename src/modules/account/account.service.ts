@@ -42,56 +42,58 @@ export class AccountService {
   }
 
   async confirmDeleteRequest(data: DeleteAccountConfirmDto, userId: string) {
-    const deleteRequest = await this.prisma.deleteAccountRequest.findUnique({
-      where: { id: data.deleteRequestId },
-      include: { user: true },
+    return await this.prisma.$transaction(async (tx) => {
+      const deleteRequest = await tx.deleteAccountRequest.findUnique({
+        where: { id: data.deleteRequestId },
+        include: { user: true },
+      });
+
+      if (!deleteRequest) {
+        throw new NotFoundException('Solicitud de eliminación no encontrada');
+      }
+
+      const now = new Date();
+
+      if (deleteRequest.userId !== userId) {
+        throw new UnauthorizedException(
+          'No tienes permiso para confirmar esta solicitud',
+        );
+      }
+
+      if (deleteRequest.usedAt !== null) {
+        throw new BadRequestException(
+          'Esta solicitud ya ha sido procesada o invalidada',
+        );
+      }
+
+      if (deleteRequest.expiresAt < now) {
+        throw new BadRequestException(
+          'La solicitud ha expirado. Por favor, solicita una nueva',
+        );
+      }
+
+      const user = deleteRequest.user;
+
+      if (!user || !user.passwordHash) {
+        throw new UnauthorizedException('Credenciales inválidas');
+      }
+
+      const isPasswordValid = await argon2.verify(
+        user.passwordHash,
+        data.password,
+      );
+
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('Contraseña incorrecta');
+      }
+
+      // Mark the delete request as used to prevent reuse
+      await tx.deleteAccountRequest.update({
+        where: { id: data.deleteRequestId },
+        data: { usedAt: new Date() },
+      });
+
+      return true;
     });
-
-    if (!deleteRequest) {
-      throw new NotFoundException('Solicitud de eliminación no encontrada');
-    }
-
-    const now = new Date();
-
-    if (deleteRequest.userId !== userId) {
-      throw new UnauthorizedException(
-        'No tienes permiso para confirmar esta solicitud',
-      );
-    }
-
-    if (deleteRequest.usedAt !== null) {
-      throw new BadRequestException(
-        'Esta solicitud ya ha sido procesada o invalidada',
-      );
-    }
-
-    if (deleteRequest.expiresAt < now) {
-      throw new BadRequestException(
-        'La solicitud ha expirado. Por favor, solicita una nueva',
-      );
-    }
-
-    const user = deleteRequest.user;
-
-    if (!user || !user.passwordHash) {
-      throw new UnauthorizedException('Credenciales inválidas');
-    }
-
-    const isPasswordValid = await argon2.verify(
-      user.passwordHash,
-      data.password,
-    );
-
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Contraseña incorrecta');
-    }
-
-    // Mark the delete request as used to prevent reuse
-    await this.prisma.deleteAccountRequest.update({
-      where: { id: data.deleteRequestId },
-      data: { usedAt: new Date() },
-    });
-
-    return true;
   }
 }
