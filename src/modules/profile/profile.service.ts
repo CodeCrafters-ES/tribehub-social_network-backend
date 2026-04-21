@@ -1,6 +1,11 @@
 // src/modules/profile/profile.service.ts
 
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { ProfileRepository } from './repositories/profile.repository';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
@@ -44,8 +49,8 @@ export class ProfileService {
     if (!existing) {
       // Create initial profile (onboarding) - displayName is required
       if (!dto.displayName) {
-        throw new NotFoundException(
-          'Profile not found. displayName is required for onboarding.',
+        throw new BadRequestException(
+          'displayName is required for onboarding.',
         );
       }
       const profile = await this.profileRepository.upsert(userId, {

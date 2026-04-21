@@ -344,8 +344,6 @@ components:
 
     UpdateProfileRequest:
       type: object
-      required:
-        - displayName
       properties:
         displayName:
           type: string
