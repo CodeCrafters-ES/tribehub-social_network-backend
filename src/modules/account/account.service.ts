@@ -17,28 +17,30 @@ export class AccountService {
     const expiresAt = new Date();
     expiresAt.setSeconds(expiresAt.getSeconds() + EXPIRES_IN_SECONDS);
 
-    // Invalidate prior requests to prevent token accumulation
-    await this.prisma.deleteAccountRequest.updateMany({
-      where: {
-        userId: userId,
-        usedAt: null,
-      },
-      data: {
-        usedAt: new Date(),
-      },
-    });
+    return await this.prisma.$transaction(async (tx) => {
+      // Invalidate prior requests to prevent token accumulation
+      await tx.deleteAccountRequest.updateMany({
+        where: {
+          userId: userId,
+          usedAt: null,
+        },
+        data: {
+          usedAt: new Date(),
+        },
+      });
 
-    const newRequest = await this.prisma.deleteAccountRequest.create({
-      data: {
-        userId: userId,
-        expiresAt: expiresAt,
-      },
-    });
+      const newRequest = await tx.deleteAccountRequest.create({
+        data: {
+          userId: userId,
+          expiresAt: expiresAt,
+        },
+      });
 
-    return {
-      deleteRequestId: newRequest.id,
-      expiresIn: EXPIRES_IN_SECONDS,
-    };
+      return {
+        deleteRequestId: newRequest.id,
+        expiresIn: EXPIRES_IN_SECONDS,
+      };
+    });
   }
 
   async confirmDeleteRequest(data: DeleteAccountConfirmDto, userId: string) {
@@ -49,33 +51,33 @@ export class AccountService {
       });
 
       if (!deleteRequest) {
-        throw new NotFoundException('Solicitud de eliminación no encontrada');
+        throw new NotFoundException('Delete request not found');
       }
 
       const now = new Date();
 
       if (deleteRequest.userId !== userId) {
         throw new UnauthorizedException(
-          'No tienes permiso para confirmar esta solicitud',
+          'You do not have permission to confirm this request',
         );
       }
 
       if (deleteRequest.usedAt !== null) {
         throw new BadRequestException(
-          'Esta solicitud ya ha sido procesada o invalidada',
+          'This request has already been processed or invalidated',
         );
       }
 
       if (deleteRequest.expiresAt < now) {
         throw new BadRequestException(
-          'La solicitud ha expirado. Por favor, solicita una nueva',
+          'Request has expired. Please request a new one',
         );
       }
 
       const user = deleteRequest.user;
 
       if (!user || !user.passwordHash) {
-        throw new UnauthorizedException('Credenciales inválidas');
+        throw new UnauthorizedException('Invalid credentials');
       }
 
       const isPasswordValid = await argon2.verify(
@@ -84,7 +86,7 @@ export class AccountService {
       );
 
       if (!isPasswordValid) {
-        throw new UnauthorizedException('Contraseña incorrecta');
+        throw new UnauthorizedException('Invalid password');
       }
 
       // Mark the delete request as used to prevent reuse
@@ -93,7 +95,12 @@ export class AccountService {
         data: { usedAt: new Date() },
       });
 
-      return true;
+      await tx.user.update({
+        where: { id: userId },
+        data: { deletedAt: new Date() },
+      });
+
+      return { ok: true };
     });
   }
 }
