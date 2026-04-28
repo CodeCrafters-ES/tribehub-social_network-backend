@@ -130,4 +130,47 @@ describe('SentryExceptionFilter', () => {
       message: 'Internal server error',
     });
   });
+
+  // NestJS v11: when an object is passed to BadRequestException, getResponse()
+  // returns the object WITHOUT statusCode. The filter must inject it for a
+  // consistent API contract.
+  it('injects statusCode when HttpException body lacks it (NestJS v11 object payload)', () => {
+    // Simulates: new BadRequestException({ message: 'Errores', errors: [...] })
+    // where getResponse() returns { message, errors } without statusCode.
+    const exception = new HttpException(
+      {
+        message: 'Errores de validación',
+        errors: [{ field: 'email', errors: ['invalid'] }],
+      },
+      HttpStatus.BAD_REQUEST,
+    );
+    const host = buildHost();
+
+    filter.catch(exception, host as any);
+
+    expect(host.response.status).toHaveBeenCalledWith(400);
+    expect(host.json).toHaveBeenCalledWith({
+      statusCode: 400,
+      message: 'Errores de validación',
+      errors: [{ field: 'email', errors: ['invalid'] }],
+    });
+  });
+
+  it('injects statusCode when HttpException body is a string', () => {
+    // Simulates: new HttpException('plain message', 418)
+    // where getResponse() returns 'plain message' (a string).
+    const exception = new HttpException(
+      'plain message',
+      HttpStatus.I_AM_A_TEAPOT,
+    );
+    const host = buildHost();
+
+    filter.catch(exception, host as any);
+
+    expect(host.response.status).toHaveBeenCalledWith(418);
+    expect(host.json).toHaveBeenCalledWith({
+      statusCode: 418,
+      message: 'plain message',
+    });
+  });
 });

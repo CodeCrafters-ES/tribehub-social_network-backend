@@ -44,7 +44,18 @@ export class SentryExceptionFilter implements ExceptionFilter {
 
     if (isHttpException) {
       const responseBody = exception.getResponse();
-      response.status(status).json(responseBody);
+
+      // NestJS v11: when an object is passed to HttpException subclasses,
+      // getResponse() returns that object WITHOUT statusCode/error. To keep
+      // a consistent API contract we always inject statusCode into the body
+      // so every error response includes it, regardless of how the exception
+      // was constructed (string vs object payload).
+      const body =
+        typeof responseBody === 'object' && responseBody !== null
+          ? { statusCode: status, ...responseBody }
+          : { statusCode: status, message: String(responseBody) };
+
+      response.status(status).json(body);
     } else if (
       typeof exception === 'object' &&
       exception !== null &&

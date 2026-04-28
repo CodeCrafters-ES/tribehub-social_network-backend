@@ -14,6 +14,15 @@ import cookieParser from 'cookie-parser';
 import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/prisma/prisma.service';
 import { AuthService } from './../src/auth/auth.service';
+import { QueueService } from './../src/queues/queue.service';
+import { DefaultWorker } from './../src/queues/workers/default.worker';
+import { QueueMonitorService } from './../src/queues/alerts/queue-monitor.service';
+import { AppMonitorService } from './../src/observability/alerts/app-monitor.service';
+import { SecurityMonitorService } from './../src/observability/alerts/security-monitor.service';
+import { DiscordAlertService } from './../src/queues/alerts/discord-alert.service';
+import { MetricsService } from './../src/observability/metrics/metrics.service';
+import { BULLBOARD_ADAPTER } from './../src/admin/queues/bullboard.module';
+import { ExpressAdapter } from '@bull-board/express';
 
 interface ValidationErrorBody {
   errors: Array<{ field: string; errors: string[] }>;
@@ -107,16 +116,53 @@ describe('POST /api/v1/auth/register (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
+      // Prisma is mocked so e2e tests don't need a real DB connection
       .overrideProvider(PrismaService)
       .useValue({
         $connect: vi.fn(),
         $disconnect: vi.fn(),
       })
+      // AuthService is mocked to control register/login/logout behaviour
       .overrideProvider(AuthService)
       .useValue({
         register: mockRegister,
         login: vi.fn(),
         logout: vi.fn(),
+      })
+      // Redis-dependent providers are stubbed so e2e tests don't need a
+      // running Redis instance. Without these overrides, BullMQ queues and
+      // IORedis clients create real connections that produce "Connection is
+      // closed" unhandled rejections during app teardown.
+      .overrideProvider(QueueService)
+      .useValue({
+        queue: { on: vi.fn(), close: vi.fn(), removeAllListeners: vi.fn() },
+        onModuleDestroy: vi.fn(),
+      })
+      .overrideProvider(DefaultWorker)
+      .useValue({ onModuleInit: vi.fn(), onModuleDestroy: vi.fn() })
+      .overrideProvider(QueueMonitorService)
+      .useValue({ onModuleInit: vi.fn(), onModuleDestroy: vi.fn() })
+      .overrideProvider(AppMonitorService)
+      .useValue({ onModuleInit: vi.fn(), onModuleDestroy: vi.fn() })
+      .overrideProvider(SecurityMonitorService)
+      .useValue({ onModuleInit: vi.fn(), onModuleDestroy: vi.fn() })
+      .overrideProvider(DiscordAlertService)
+      .useValue({ sendAlert: vi.fn() })
+      .overrideProvider(MetricsService)
+      .useValue({
+        onModuleInit: vi.fn(),
+        onModuleDestroy: vi.fn(),
+        normaliseRoute: vi.fn((route: string) => route),
+        httpRequestsTotal: { inc: vi.fn(), labels: vi.fn() },
+        httpRequestDurationSeconds: { observe: vi.fn(), labels: vi.fn() },
+      })
+      .overrideProvider(BULLBOARD_ADAPTER)
+      .useFactory({
+        factory: () => {
+          const adapter = new ExpressAdapter();
+          adapter.setBasePath('/admin/queues');
+          return adapter;
+        },
       })
       .compile();
 
@@ -302,8 +348,12 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .send(VALID_PAYLOAD)
       .expect(400);
 
-    // The body should contain the code property
+// NestJS v11: getResponse() returns the raw object passed to BadRequestException.
+    // The SentryExceptionFilter ensures statusCode is present in the body.
+    // { code: 'REGISTER_ERROR', message: error.message } → body becomes
+    // { statusCode: 400, code: 'REGISTER_ERROR', message: 'Supabase is down' }
     expect(response.body).toMatchObject({
+      statusCode: 400,
       code: 'REGISTER_ERROR',
       message: 'Supabase is down',
     });
