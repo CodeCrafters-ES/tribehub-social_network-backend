@@ -78,8 +78,13 @@ export class AuthController {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       throw new BadRequestException({
+<<<<<<< HEAD
         message,
         code: 'LOGIN_ERROR',
+=======
+        code: 'LOGIN_ERROR',
+        message,
+>>>>>>> a801937 (fix: normalize HTTP responses to always include statusCode)
       });
     }
   }
@@ -100,4 +105,66 @@ export class AuthController {
     await this.authService.logout(rawToken);
     clearAuthCookies(res);
   }
+<<<<<<< HEAD
+=======
+
+  /**
+   * POST /auth/refresh
+   *
+   * Refreshes the access token using a valid refresh token.
+   * Requires CSRF validation via double-submit cookie pattern.
+   *
+   * Request:
+   *   - Cookie: refresh_token (httpOnly)
+   *   - Header: x-csrf-token
+   *
+   * Response:
+   *   - Body: { accessToken, expiresIn }
+   *   - Cookie: new refresh_token (httpOnly)
+   *   - Cookie: new XSRF-TOKEN (for next request)
+   */
+
+  @ApiOperation({ summary: 'Refresh access token' })
+  @ApiResponse({
+    status: 200,
+    description: 'Token refreshed successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid or expired refresh token',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'CSRF token missing or mismatch',
+  })
+  @UseGuards(CsrfGuard)
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const rawToken = req.cookies?.[REFRESH_TOKEN_COOKIE] as string | undefined;
+
+    if (!rawToken) {
+      throw new UnauthorizedException(); // 'Refresh token missing';
+    }
+
+    // Call the refresh service
+    const result = await this.authService.refresh(rawToken);
+
+    // Set new refresh token cookie
+    setRefreshTokenCookie(res, result.refreshToken);
+
+    // Set new CSRF token cookie for next request
+    const newCsrfToken = randomBytes(32).toString('hex');
+    setCsrfCookie(res, newCsrfToken);
+
+    // Return only access token in body (no refresh token!)
+    return {
+      accessToken: result.accessToken,
+      expiresIn: result.expiresIn,
+    };
+  }
+>>>>>>> a801937 (fix: normalize HTTP responses to always include statusCode)
 }

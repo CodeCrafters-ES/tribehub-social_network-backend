@@ -274,6 +274,7 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .expect(400);
 
     expect(response.body).toMatchObject({
+      statusCode: 400,
       code: 'REGISTER_ERROR',
     });
   });
