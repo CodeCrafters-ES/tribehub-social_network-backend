@@ -61,13 +61,20 @@ model RefreshToken {
   tokenHash        String    @unique // SHA-256 hash del refresh token (nunca texto plano)
   revokedAt        DateTime? // null = activo; valor = revocado
   revocationReason String?   // 'logout' | 'rotation' | 'admin'
+  replacedByTokenId String?
+  updatedAt        DateTime  @updatedAt
   createdAt        DateTime  @default(now())
   expiresAt        DateTime  // Fecha de expiración del token
+  ipAddress        String?
+  userAgent        String?
 
   // Relaciones
   user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replacedByToken  RefreshToken? @relation("RefreshTokenRotation", fields: [replacedByTokenId], references: [id])
+  previousTokens   RefreshToken[] @relation("RefreshTokenRotation")
 
   @@index([userId])
+  @@index([replacedByTokenId])
   @@map("refresh_tokens")
 }
 

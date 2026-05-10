@@ -22,6 +22,7 @@ describe('AuthController', () => {
             register: vi.fn(),
             login: vi.fn(),
             logout: vi.fn(),
+            refreshSession: vi.fn(),
           },
         },
       ],
@@ -63,14 +64,22 @@ describe('AuthController', () => {
       session: { access_token: 'access-jwt', refresh_token: 'refresh-jwt' },
       user: { id: 'user-id', email: 'test@gmail.com' },
     });
+    const req = {
+      ip: '127.0.0.1',
+      headers: { 'user-agent': 'vitest' },
+    } as unknown as import('express').Request;
+    const res = {
+      cookie: vi.fn(),
+      clearCookie: vi.fn(),
+    } as unknown as import('express').Response;
 
-    const result = await controller.login(dto);
+    const result = await controller.login(dto, req, res);
     expect(result.success).toBe(true);
     expect(result.data).toEqual({
       accessToken: 'access-jwt',
-      refreshToken: 'refresh-jwt',
       user: { id: 'user-id', email: 'test@gmail.com' },
     });
+    expect((res.cookie as Mock).mock.calls.length).toBe(2);
   });
 
   it('should handle login error', async () => {
@@ -80,7 +89,42 @@ describe('AuthController', () => {
     };
     (service.login as Mock).mockRejectedValue(new Error('Login failed'));
 
-    await expect(controller.login(dto)).rejects.toThrowError('Login failed');
+    await expect(
+      controller.login(
+        { ...dto },
+        { headers: {}, ip: '127.0.0.1' } as never,
+        {} as never,
+      ),
+    ).rejects.toThrowError('Login failed');
+  });
+
+  describe('refresh', () => {
+    it('rotates cookie and returns new access token', async () => {
+      (service.refreshSession as Mock).mockResolvedValue({
+        accessToken: 'new-access',
+        refreshToken: 'new-refresh',
+        refreshExpiresAt: new Date(Date.now() + 1000),
+        csrfToken: 'new-csrf',
+      });
+
+      const req = {
+        cookies: { refresh_token: 'old-refresh' },
+        ip: '127.0.0.1',
+        headers: { 'user-agent': 'vitest' },
+      } as unknown as import('express').Request;
+      const res = {
+        cookie: vi.fn(),
+        clearCookie: vi.fn(),
+      } as unknown as import('express').Response;
+
+      const result = await controller.refresh(req, res);
+
+      expect(result).toMatchObject({
+        success: true,
+        data: { accessToken: 'new-access' },
+      });
+      expect((res.cookie as Mock).mock.calls.length).toBe(2);
+    });
   });
 
   describe('logout', () => {

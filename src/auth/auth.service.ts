@@ -5,9 +5,10 @@ import {
   ConflictException,
   InternalServerErrorException,
   Logger,
+  UnauthorizedException,
 } from '@nestjs/common';
 import * as argon2 from 'argon2';
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 
 import { RegisterRequestDto } from './dto/register.request.dto';
 import { LoginDto } from './dto/login.dto';
@@ -18,6 +19,7 @@ import {
 import { UsersRepository } from '../modules/users/repositories/users.repository';
 import {
   AuthRepository,
+  RefreshTokenRotationConflictError,
   type RefreshTokenRecord,
 } from './repositories/auth.repository';
 import { SecurityMonitorService } from '../observability/alerts/security-monitor.service';
@@ -25,6 +27,8 @@ import { SecurityMonitorService } from '../observability/alerts/security-monitor
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  private readonly refreshTtlMs =
+    Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? '7') * 24 * 60 * 60 * 1000;
 
   constructor(
     private readonly usersRepository: UsersRepository,
@@ -122,7 +126,10 @@ export class AuthService {
     }
   }
 
-  async login(data: LoginDto) {
+  async login(
+    data: LoginDto,
+    metadata?: { ipAddress?: string; userAgent?: string },
+  ) {
     const supabase = getSupabaseClient();
     const { email, password } = data;
     const { data: signInData, error } = await supabase.auth.signInWithPassword({
@@ -133,7 +140,94 @@ export class AuthService {
       this.securityMonitor.recordFailedLogin();
       throw new Error(error.message);
     }
+
+    const refreshToken = signInData.session?.refresh_token;
+    const supabaseUserId = signInData.user?.id;
+    if (refreshToken && supabaseUserId) {
+      const user = await this.usersRepository.findBySupabaseId(supabaseUserId);
+      if (user) {
+        await this.authRepository.createRefreshToken({
+          userId: user.id,
+          tokenHash: this.hashToken(refreshToken),
+          expiresAt: new Date(Date.now() + this.refreshTtlMs),
+          ipAddress: metadata?.ipAddress,
+          userAgent: metadata?.userAgent,
+        });
+      }
+    }
+
     return signInData;
+  }
+
+  async refreshSession(params: {
+    rawRefreshToken: string;
+    ipAddress?: string;
+    userAgent?: string;
+  }): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    refreshExpiresAt: Date;
+    csrfToken: string;
+  }> {
+    const tokenHash = this.hashToken(params.rawRefreshToken);
+    const existingToken =
+      await this.authRepository.findRefreshTokenByHash(tokenHash);
+
+    if (!existingToken) {
+      this.securityMonitor.recordInvalidToken();
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    if (
+      existingToken.revokedAt ||
+      existingToken.expiresAt.getTime() <= Date.now()
+    ) {
+      await this.authRepository.revokeAllActiveUserTokens(
+        existingToken.userId,
+        'reuse_detected',
+      );
+      this.securityMonitor.recordInvalidToken();
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.auth.refreshSession({
+      refresh_token: params.rawRefreshToken,
+    });
+
+    if (error || !data.session?.access_token || !data.session.refresh_token) {
+      this.securityMonitor.recordInvalidToken();
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    const nextRefreshToken = data.session.refresh_token;
+    const nextRefreshHash = this.hashToken(nextRefreshToken);
+    const nextExpiry = new Date(Date.now() + this.refreshTtlMs);
+
+    try {
+      await this.authRepository.rotateRefreshToken({
+        currentTokenId: existingToken.id,
+        currentTokenHash: tokenHash,
+        newTokenHash: nextRefreshHash,
+        userId: existingToken.userId,
+        newExpiresAt: nextExpiry,
+        ipAddress: params.ipAddress,
+        userAgent: params.userAgent,
+      });
+    } catch (error) {
+      if (error instanceof RefreshTokenRotationConflictError) {
+        this.securityMonitor.recordInvalidToken();
+        throw new UnauthorizedException('Unauthorized');
+      }
+      throw error;
+    }
+
+    return {
+      accessToken: data.session.access_token,
+      refreshToken: nextRefreshToken,
+      refreshExpiresAt: nextExpiry,
+      csrfToken: this.generateCsrfToken(),
+    };
   }
 
   /**
@@ -153,7 +247,7 @@ export class AuthService {
     }
 
     // Hash the raw token before querying; we never store raw tokens.
-    const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+    const tokenHash = this.hashToken(rawToken);
 
     try {
       const token: RefreshTokenRecord | null =
@@ -177,5 +271,13 @@ export class AuthService {
         message: err instanceof Error ? err.message : 'Unknown DB error',
       });
     }
+  }
+
+  private hashToken(rawToken: string): string {
+    return createHash('sha256').update(rawToken).digest('hex');
+  }
+
+  private generateCsrfToken(): string {
+    return randomBytes(32).toString('base64url');
   }
 }

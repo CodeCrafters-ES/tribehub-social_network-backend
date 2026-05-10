@@ -74,9 +74,11 @@ function applyGlobalSetup(app: INestApplication): void {
 describe('POST /api/v1/auth/register (e2e)', () => {
   let app: INestApplication<App>;
   let mockRegister: ReturnType<typeof vi.fn>;
+  let mockRefreshSession: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     mockRegister = vi.fn();
+    mockRefreshSession = vi.fn();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -91,6 +93,7 @@ describe('POST /api/v1/auth/register (e2e)', () => {
         register: mockRegister,
         login: vi.fn(),
         logout: vi.fn(),
+        refreshSession: mockRefreshSession,
       })
       .compile();
 
@@ -297,6 +300,33 @@ describe('POST /api/v1/auth/register (e2e)', () => {
     expect(response.body).toMatchObject({
       statusCode: 500,
       message: 'Failed to create user',
+    });
+  });
+
+  it('returns 403 on /auth/refresh when CSRF header is missing', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/refresh')
+      .set('Cookie', ['refresh_token=token-a', 'XSRF-TOKEN=csrf-a'])
+      .expect(403);
+  });
+
+  it('returns 200 on /auth/refresh with valid csrf + cookies', async () => {
+    mockRefreshSession.mockResolvedValue({
+      accessToken: 'new-access-token',
+      refreshToken: 'new-refresh-token',
+      refreshExpiresAt: new Date(Date.now() + 60_000),
+      csrfToken: 'new-csrf-token',
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/auth/refresh')
+      .set('X-CSRF-Token', 'csrf-a')
+      .set('Cookie', ['refresh_token=token-a', 'XSRF-TOKEN=csrf-a'])
+      .expect(200);
+
+    expect(response.body).toMatchObject({
+      success: true,
+      data: { accessToken: 'new-access-token' },
     });
   });
 });
