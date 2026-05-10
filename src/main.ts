@@ -71,6 +71,7 @@ async function bootstrap() {
     allowedHeaders: [
       'Content-Type',
       'Authorization',
+      'X-CSRF-Token',
       'X-Requested-With',
       'Accept',
       'Origin',
