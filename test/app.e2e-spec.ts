@@ -5,12 +5,13 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/prisma/prisma.service';
+import { QueueService } from './../src/queues/queue.service';
+import { DefaultWorker } from './../src/queues/workers/default.worker';
+import { QueueMonitorService } from './../src/queues/alerts/queue-monitor.service';
 
-// Set required env vars before any module is imported/initialized.
-// getRedisConnection() throws at module load time when REDIS_URL is absent.
-// Pointing to localhost is sufficient for the module to boot; a live Redis
-// connection is not required for the health/root endpoint test.
-process.env.REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
+// Keep Redis disabled in e2e. Queue providers are mocked below, and optional
+// Redis-backed services should fall back without opening sockets.
+delete process.env.REDIS_URL;
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
@@ -23,6 +24,29 @@ describe('AppController (e2e)', () => {
       .useValue({
         $connect: vi.fn(),
         $disconnect: vi.fn(),
+      })
+      .overrideProvider(QueueService)
+      .useValue({
+        queue: {
+          name: 'jobs',
+          metaValues: { version: 'bullmq:5.0.0' },
+        },
+        enqueueSendWelcomeEmail: vi.fn(),
+        enqueueProcessImage: vi.fn(),
+        getWaitingCount: vi.fn().mockResolvedValue(0),
+        getFailedCount: vi.fn().mockResolvedValue(0),
+        onModuleDestroy: vi.fn(),
+      })
+      .overrideProvider(DefaultWorker)
+      .useValue({
+        onModuleInit: vi.fn(),
+        onModuleDestroy: vi.fn(),
+      })
+      .overrideProvider(QueueMonitorService)
+      .useValue({
+        onModuleInit: vi.fn(),
+        onModuleDestroy: vi.fn(),
+        runCheck: vi.fn(),
       })
       .compile();
 

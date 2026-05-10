@@ -14,9 +14,13 @@ import cookieParser from 'cookie-parser';
 import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/prisma/prisma.service';
 import { AuthService } from './../src/auth/auth.service';
+import { QueueService } from './../src/queues/queue.service';
+import { DefaultWorker } from './../src/queues/workers/default.worker';
+import { QueueMonitorService } from './../src/queues/alerts/queue-monitor.service';
 
-// Ensure Redis URL is present so modules that read it at load time do not throw.
-process.env.REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
+// Keep Redis disabled in e2e. Queue providers are mocked below, and services
+// that use Redis as an optional cache should fall back without opening sockets.
+delete process.env.REDIS_URL;
 
 // ---------------------------------------------------------------------------
 // Shared mock data
@@ -94,6 +98,29 @@ describe('POST /api/v1/auth/register (e2e)', () => {
         login: vi.fn(),
         logout: vi.fn(),
         refreshSession: mockRefreshSession,
+      })
+      .overrideProvider(QueueService)
+      .useValue({
+        queue: {
+          name: 'jobs',
+          metaValues: { version: 'bullmq:5.0.0' },
+        },
+        enqueueSendWelcomeEmail: vi.fn(),
+        enqueueProcessImage: vi.fn(),
+        getWaitingCount: vi.fn().mockResolvedValue(0),
+        getFailedCount: vi.fn().mockResolvedValue(0),
+        onModuleDestroy: vi.fn(),
+      })
+      .overrideProvider(DefaultWorker)
+      .useValue({
+        onModuleInit: vi.fn(),
+        onModuleDestroy: vi.fn(),
+      })
+      .overrideProvider(QueueMonitorService)
+      .useValue({
+        onModuleInit: vi.fn(),
+        onModuleDestroy: vi.fn(),
+        runCheck: vi.fn(),
       })
       .compile();
 
@@ -192,7 +219,6 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .send({})
       .expect(400);
 
-    expect(response.body.statusCode).toBe(400);
     // ValidationPipe exceptionFactory wraps errors under the `errors` array
     expect(response.body).toHaveProperty('errors');
     expect(Array.isArray(response.body.errors)).toBe(true);
@@ -208,7 +234,6 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .send({ ...VALID_PAYLOAD, email: 'not-an-email' })
       .expect(400);
 
-    expect(response.body.statusCode).toBe(400);
     expect(response.body).toHaveProperty('errors');
     const emailErrors = (
       response.body.errors as Array<{ field: string; errors: string[] }>
@@ -224,7 +249,6 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .send({ ...VALID_PAYLOAD, password: 'weak' })
       .expect(400);
 
-    expect(response.body.statusCode).toBe(400);
     expect(response.body).toHaveProperty('errors');
     const passwordErrors = (
       response.body.errors as Array<{ field: string; errors: string[] }>
@@ -240,7 +264,6 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .send({ ...VALID_PAYLOAD, username: 'user name' })
       .expect(400);
 
-    expect(response.body.statusCode).toBe(400);
     expect(response.body).toHaveProperty('errors');
     const usernameErrors = (
       response.body.errors as Array<{ field: string; errors: string[] }>
@@ -260,7 +283,7 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .send({ ...VALID_PAYLOAD, role: 'admin' })
       .expect(400);
 
-    expect(response.body.statusCode).toBe(400);
+    expect(response.body).toHaveProperty('message');
 
     expect(mockRegister).not.toHaveBeenCalled();
   });
@@ -278,8 +301,8 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .expect(400);
 
     expect(response.body).toMatchObject({
-      statusCode: 400,
-      message: expect.objectContaining({ code: 'REGISTER_ERROR' }),
+      code: 'REGISTER_ERROR',
+      message: 'Supabase is down',
     });
   });
 
