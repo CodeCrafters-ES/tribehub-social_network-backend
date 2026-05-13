@@ -6,7 +6,10 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import { InterestsRepository, InterestItem } from '../repositories/interests.repository';
+import {
+  InterestsRepository,
+  InterestItem,
+} from '../repositories/interests.repository';
 import { UsersRepository } from '../../users/repositories/users.repository';
 import { SetUserInterestsDto } from '../dto/set-user-interests.dto';
 
@@ -27,11 +30,17 @@ export class InterestsService {
       category: i.category,
       status: i.status,
     }));
-    this.logger.log({ action: 'interests.list', count: items.length, category });
+    this.logger.log({
+      action: 'interests.list',
+      count: items.length,
+      category,
+    });
     return { items };
   }
 
-  async getUserInterests(supabaseId: string): Promise<{ items: InterestItem[] }> {
+  async getUserInterests(
+    supabaseId: string,
+  ): Promise<{ items: InterestItem[] }> {
     const user = await this.usersRepository.findBySupabaseId(supabaseId);
     if (!user) throw new UnauthorizedException();
     const items = await this.interestsRepository.getUserInterests(user.id);
@@ -59,12 +68,18 @@ export class InterestsService {
 
       const hasPending = found.some((i) => i.status !== 'VALIDATED');
       if (hasPending) {
-        throw new BadRequestException('Cannot assign interests with pending status.');
+        throw new BadRequestException(
+          'Cannot assign interests with pending status.',
+        );
       }
     }
 
     await this.interestsRepository.setUserInterests(user.id, uniqueIds);
-    this.logger.log({ action: 'userInterests.set', userId: user.id, count: uniqueIds.length });
+    this.logger.log({
+      action: 'userInterests.set',
+      userId: user.id,
+      count: uniqueIds.length,
+    });
 
     const items = await this.interestsRepository.getUserInterests(user.id);
     return { items };

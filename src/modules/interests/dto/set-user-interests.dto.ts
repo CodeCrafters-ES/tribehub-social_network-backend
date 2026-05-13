@@ -7,7 +7,8 @@ export class SetUserInterestsDto {
   @ApiProperty({
     type: [String],
     format: 'uuid',
-    description: 'List of interest IDs to assign. Empty array resets all interests.',
+    description:
+      'List of interest IDs to assign. Empty array resets all interests.',
     example: ['11111111-1111-1111-1111-111111111111'],
   })
   @IsArray()

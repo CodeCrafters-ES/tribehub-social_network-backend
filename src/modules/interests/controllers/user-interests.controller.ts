@@ -1,13 +1,6 @@
 // src/modules/interests/controllers/user-interests.controller.ts
 
-import {
-  Body,
-  Controller,
-  Get,
-  Put,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Put, Req, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -34,19 +27,27 @@ export class UserInterestsController {
   @ApiResponse({ status: 200, description: 'User interests' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   getMyInterests(@Req() req: AuthenticatedRequest) {
-    return this.interestsService.getUserInterests(req.supabaseUser.sub as string);
+    return this.interestsService.getUserInterests(
+      req.supabaseUser.sub as string,
+    );
   }
 
   @Put('me/interests')
   @UseGuards(SupabaseAuthGuard)
-  @ApiOperation({ summary: 'Replace the authenticated user\'s interests' })
+  @ApiOperation({ summary: "Replace the authenticated user's interests" })
   @ApiResponse({ status: 200, description: 'Updated user interests' })
-  @ApiResponse({ status: 400, description: 'Invalid interest IDs or pending status' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid interest IDs or pending status',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   setMyInterests(
     @Req() req: AuthenticatedRequest,
     @Body() dto: SetUserInterestsDto,
   ) {
-    return this.interestsService.setUserInterests(req.supabaseUser.sub as string, dto);
+    return this.interestsService.setUserInterests(
+      req.supabaseUser.sub as string,
+      dto,
+    );
   }
 }

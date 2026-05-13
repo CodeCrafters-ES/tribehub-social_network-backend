@@ -11,7 +11,11 @@ export class InterestsController {
 
   @Get()
   @ApiOperation({ summary: 'List all validated interests' })
-  @ApiQuery({ name: 'category', required: false, description: 'Filter by category' })
+  @ApiQuery({
+    name: 'category',
+    required: false,
+    description: 'Filter by category',
+  })
   @ApiResponse({ status: 200, description: 'List of validated interests' })
   listInterests(@Query('category') category?: string) {
     return this.interestsService.listInterests(category);
