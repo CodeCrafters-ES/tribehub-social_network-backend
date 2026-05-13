@@ -43,8 +43,15 @@ export class SupabaseAuthGuard implements CanActivate {
 
     // Validate Supabase JWT
     try {
-      const decoded = verify(token, SUPABASE_JWT_SECRET) as JwtPayload;
+      // jsonwebtoken's verify() return type is a union that includes string,
+      // but with a secret (not RequestHandler) it always returns JwtPayload.
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment -- jsonwebtoken types are not fully resolvable; verify() always returns JwtPayload here
+      const decoded = verify(
+        token,
+        SUPABASE_JWT_SECRET,
+      ) as unknown as JwtPayload;
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- decoded is cast from unknown via as unknown as JwtPayload above
       request.supabaseUser = decoded;
       request.supabaseToken = token;
       return true;

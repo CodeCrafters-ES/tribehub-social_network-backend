@@ -117,7 +117,10 @@ async function bootstrap() {
       }
 
       try {
-        const decoded = verify(token, jwtSecret) as {
+        // jsonwebtoken's verify() return type is a union that includes string,
+        // but with a secret (not RequestHandler) it always returns a JwtPayload object.
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call -- jsonwebtoken types are not fully resolvable; verify() always returns JwtPayload here
+        const decoded = verify(token, jwtSecret) as unknown as {
           app_metadata?: { role?: string };
         };
 

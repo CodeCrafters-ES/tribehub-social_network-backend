@@ -26,11 +26,19 @@ export class SentryExceptionFilter implements ExceptionFilter {
         scope.setContext('request', { requestId });
         Sentry.captureException(exception);
       });
-      this.logger.error(
-        `Unhandled exception captured by Sentry — requestId=${requestId}`,
+      const exceptionMessage =
         exception instanceof Error
           ? exception.stack
-          : String((exception as any)?.message ?? exception),
+          : String(
+              typeof exception === 'object' &&
+                exception !== null &&
+                'message' in exception
+                ? (exception as Record<string, unknown>).message
+                : exception,
+            );
+      this.logger.error(
+        `Unhandled exception captured by Sentry — requestId=${requestId}`,
+        exceptionMessage,
       );
     }
 
