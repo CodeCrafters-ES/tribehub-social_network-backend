@@ -31,7 +31,19 @@ vi.mock('ioredis', () => ({
 
 import { SystemConfigService } from './system-config.service';
 
-const getMockRedis = (): any => mockRedisInstance;
+interface MockRedisInstance {
+  on: ReturnType<typeof vi.fn>;
+  connect: ReturnType<typeof vi.fn>;
+  get: ReturnType<typeof vi.fn>;
+  set: ReturnType<typeof vi.fn>;
+  del: ReturnType<typeof vi.fn>;
+  scan: ReturnType<typeof vi.fn>;
+  quit: ReturnType<typeof vi.fn>;
+  removeAllListeners: ReturnType<typeof vi.fn>;
+}
+
+const getMockRedis = (): MockRedisInstance =>
+  mockRedisInstance as MockRedisInstance;
 
 // ---------------------------------------------------------------------------
 // Repository mock
@@ -300,7 +312,7 @@ describe('SystemConfigService TTL expiry', () => {
     const service = buildService();
     // Patch cacheTtlMs to 1 ms so we can expire it in the test.
 
-    (service as any).cacheTtlMs = 1;
+    (service as unknown as Record<string, unknown>).cacheTtlMs = 1;
     service.onModuleInit();
 
     mockRepository.findByKey.mockResolvedValue({

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { HttpException, HttpStatus } from '@nestjs/common';
+import { ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
 import { SentryExceptionFilter } from './sentry-exception.filter';
 
 vi.mock('@sentry/nestjs', () => ({
@@ -40,7 +40,7 @@ describe('SentryExceptionFilter', () => {
     const exception = new HttpException('Not found', HttpStatus.NOT_FOUND);
     const host = buildHost();
 
-    filter.catch(exception, host as any);
+    filter.catch(exception, host as unknown as ArgumentsHost);
 
     expect(Sentry.captureException).not.toHaveBeenCalled();
   });
@@ -49,7 +49,7 @@ describe('SentryExceptionFilter', () => {
     const exception = new HttpException('Bad request', HttpStatus.BAD_REQUEST);
     const host = buildHost();
 
-    filter.catch(exception, host as any);
+    filter.catch(exception, host as unknown as ArgumentsHost);
 
     expect(Sentry.captureException).not.toHaveBeenCalled();
   });
@@ -61,7 +61,7 @@ describe('SentryExceptionFilter', () => {
     );
     const host = buildHost();
 
-    filter.catch(exception, host as any);
+    filter.catch(exception, host as unknown as ArgumentsHost);
 
     expect(Sentry.captureException).toHaveBeenCalledWith(exception);
   });
@@ -73,7 +73,7 @@ describe('SentryExceptionFilter', () => {
     );
     const host = buildHost();
 
-    filter.catch(exception, host as any);
+    filter.catch(exception, host as unknown as ArgumentsHost);
 
     expect(Sentry.captureException).toHaveBeenCalledWith(exception);
   });
@@ -82,7 +82,7 @@ describe('SentryExceptionFilter', () => {
     const exception = new Error('Unexpected failure');
     const host = buildHost();
 
-    filter.catch(exception, host as any);
+    filter.catch(exception, host as unknown as ArgumentsHost);
 
     expect(Sentry.captureException).toHaveBeenCalledWith(exception);
   });
@@ -92,7 +92,7 @@ describe('SentryExceptionFilter', () => {
     const exception = new Error('Crash');
     const host = buildHost(requestId);
 
-    filter.catch(exception, host as any);
+    filter.catch(exception, host as unknown as ArgumentsHost);
 
     expect(Sentry.withScope).toHaveBeenCalled();
     const scopeCb = (Sentry.withScope as ReturnType<typeof vi.fn>).mock
@@ -109,7 +109,7 @@ describe('SentryExceptionFilter', () => {
     );
     const host = buildHost();
 
-    filter.catch(exception, host as any);
+    filter.catch(exception, host as unknown as ArgumentsHost);
 
     expect(host.response.status).toHaveBeenCalledWith(422);
     expect(host.json).toHaveBeenCalledWith({
@@ -122,7 +122,7 @@ describe('SentryExceptionFilter', () => {
     const exception = new TypeError('Boom');
     const host = buildHost();
 
-    filter.catch(exception, host as any);
+    filter.catch(exception, host as unknown as ArgumentsHost);
 
     expect(host.response.status).toHaveBeenCalledWith(500);
     expect(host.json).toHaveBeenCalledWith({
