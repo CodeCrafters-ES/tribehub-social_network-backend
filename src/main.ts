@@ -37,7 +37,6 @@ async function bootstrap() {
           };
         });
         return new BadRequestException({
-          statusCode: 400,
           message: 'Errores de validación',
           errors: messages,
         });

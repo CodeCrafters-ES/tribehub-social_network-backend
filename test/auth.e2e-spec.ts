@@ -59,7 +59,6 @@ function applyGlobalSetup(app: INestApplication): void {
           };
         });
         return new BadRequestException({
-          statusCode: 400,
           message: 'Errores de validación',
           errors: messages,
         });
@@ -190,7 +189,6 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .send({})
       .expect(400);
 
-    expect(response.body.statusCode).toBe(400);
     // ValidationPipe exceptionFactory wraps errors under the `errors` array
     expect(response.body).toHaveProperty('errors');
     expect(Array.isArray(response.body.errors)).toBe(true);
@@ -206,7 +204,6 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .send({ ...VALID_PAYLOAD, email: 'not-an-email' })
       .expect(400);
 
-    expect(response.body.statusCode).toBe(400);
     expect(response.body).toHaveProperty('errors');
     const emailErrors = (
       response.body.errors as Array<{ field: string; errors: string[] }>
@@ -222,7 +219,6 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .send({ ...VALID_PAYLOAD, password: 'weak' })
       .expect(400);
 
-    expect(response.body.statusCode).toBe(400);
     expect(response.body).toHaveProperty('errors');
     const passwordErrors = (
       response.body.errors as Array<{ field: string; errors: string[] }>
@@ -238,7 +234,6 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .send({ ...VALID_PAYLOAD, username: 'user name' })
       .expect(400);
 
-    expect(response.body.statusCode).toBe(400);
     expect(response.body).toHaveProperty('errors');
     const usernameErrors = (
       response.body.errors as Array<{ field: string; errors: string[] }>
@@ -257,8 +252,6 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .post('/api/v1/auth/register')
       .send({ ...VALID_PAYLOAD, role: 'admin' })
       .expect(400);
-
-    expect(response.body.statusCode).toBe(400);
 
     expect(mockRegister).not.toHaveBeenCalled();
   });
