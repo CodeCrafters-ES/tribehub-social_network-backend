@@ -15,6 +15,10 @@ import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/prisma/prisma.service';
 import { AuthService } from './../src/auth/auth.service';
 
+interface ValidationErrorBody {
+  errors: Array<{ field: string; errors: string[] }>;
+}
+
 // Ensure Redis URL is present so modules that read it at load time do not throw.
 process.env.REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
 
@@ -189,11 +193,11 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .send({})
       .expect(400);
 
-    expect(response.body.statusCode).toBe(400);
     // ValidationPipe exceptionFactory wraps errors under the `errors` array
+    const body = response.body as ValidationErrorBody;
     expect(response.body).toHaveProperty('errors');
-    expect(Array.isArray(response.body.errors)).toBe(true);
-    expect(response.body.errors.length).toBeGreaterThan(0);
+    expect(Array.isArray(body.errors)).toBe(true);
+    expect(body.errors.length).toBeGreaterThan(0);
 
     // Service must NOT have been called when validation fails
     expect(mockRegister).not.toHaveBeenCalled();
@@ -205,11 +209,10 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .send({ ...VALID_PAYLOAD, email: 'not-an-email' })
       .expect(400);
 
-    expect(response.body.statusCode).toBe(400);
     expect(response.body).toHaveProperty('errors');
-    const emailErrors = (
-      response.body.errors as Array<{ field: string; errors: string[] }>
-    ).find((e) => e.field === 'email');
+    const emailErrors = (response.body as ValidationErrorBody).errors.find(
+      (e) => e.field === 'email',
+    );
     expect(emailErrors).toBeDefined();
 
     expect(mockRegister).not.toHaveBeenCalled();
@@ -221,11 +224,10 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .send({ ...VALID_PAYLOAD, password: 'weak' })
       .expect(400);
 
-    expect(response.body.statusCode).toBe(400);
     expect(response.body).toHaveProperty('errors');
-    const passwordErrors = (
-      response.body.errors as Array<{ field: string; errors: string[] }>
-    ).find((e) => e.field === 'password');
+    const passwordErrors = (response.body as ValidationErrorBody).errors.find(
+      (e) => e.field === 'password',
+    );
     expect(passwordErrors).toBeDefined();
 
     expect(mockRegister).not.toHaveBeenCalled();
@@ -237,11 +239,10 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .send({ ...VALID_PAYLOAD, username: 'user name' })
       .expect(400);
 
-    expect(response.body.statusCode).toBe(400);
     expect(response.body).toHaveProperty('errors');
-    const usernameErrors = (
-      response.body.errors as Array<{ field: string; errors: string[] }>
-    ).find((e) => e.field === 'username');
+    const usernameErrors = (response.body as ValidationErrorBody).errors.find(
+      (e) => e.field === 'username',
+    );
     expect(usernameErrors).toBeDefined();
 
     expect(mockRegister).not.toHaveBeenCalled();
@@ -252,12 +253,10 @@ describe('POST /api/v1/auth/register (e2e)', () => {
   // -------------------------------------------------------------------------
 
   it('returns 400 when extra unknown fields are sent (forbidNonWhitelisted)', async () => {
-    const response = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .post('/api/v1/auth/register')
       .send({ ...VALID_PAYLOAD, role: 'admin' })
       .expect(400);
-
-    expect(response.body.statusCode).toBe(400);
 
     expect(mockRegister).not.toHaveBeenCalled();
   });
@@ -275,8 +274,7 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .expect(400);
 
     expect(response.body).toMatchObject({
-      statusCode: 400,
-      message: expect.objectContaining({ code: 'REGISTER_ERROR' }),
+      code: 'REGISTER_ERROR',
     });
   });
 

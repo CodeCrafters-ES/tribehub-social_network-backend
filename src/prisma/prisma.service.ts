@@ -46,7 +46,11 @@ export class PrismaService
 
     const pool = new Pool({ connectionString });
 
-    const adapter = new PrismaPg(pool as any);
+    // pg's Pool type and @prisma/adapter-pg's expected Pool type diverge slightly
+    // across package versions; the cast via unknown bridges the gap safely.
+    const adapter = new PrismaPg(
+      pool as unknown as ConstructorParameters<typeof PrismaPg>[0],
+    );
 
     super({
       adapter,
