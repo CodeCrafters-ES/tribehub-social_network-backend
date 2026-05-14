@@ -77,7 +77,6 @@ export class SupabaseAuthGuard implements CanActivate {
       request.supabaseToken = token;
       return true;
     } catch (err) {
-      console.error('[SupabaseAuthGuard] JWT error:', err);
       this.securityMonitor.recordInvalidToken();
       const name = err instanceof Error ? err.name : '';
       if (name === 'TokenExpiredError') {
