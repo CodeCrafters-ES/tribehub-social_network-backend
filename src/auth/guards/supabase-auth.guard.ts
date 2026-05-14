@@ -7,10 +7,20 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { verify, type JwtPayload } from 'jsonwebtoken';
+import { verify, type JwtPayload, type GetPublicKeyOrSecret } from 'jsonwebtoken';
+import JwksClient from 'jwks-rsa';
 import { SecurityMonitorService } from '../../observability/alerts/security-monitor.service';
 
-const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+
+const jwksClient = SUPABASE_URL
+  ? JwksClient({
+      jwksUri: `${SUPABASE_URL}/auth/v1/.well-known/jwks.json`,
+      cache: true,
+      cacheMaxEntries: 5,
+      cacheMaxAge: 600_000,
+    })
+  : null;
 
 type AuthenticatedRequest = Request & {
   supabaseUser: JwtPayload;
@@ -21,7 +31,7 @@ type AuthenticatedRequest = Request & {
 export class SupabaseAuthGuard implements CanActivate {
   constructor(private readonly securityMonitor: SecurityMonitorService) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const authHeader = request.headers['authorization'];
 
@@ -37,19 +47,31 @@ export class SupabaseAuthGuard implements CanActivate {
       throw new UnauthorizedException('Missing token');
     }
 
-    if (!SUPABASE_JWT_SECRET) {
-      throw new UnauthorizedException('JWT secret not configured');
+    if (!jwksClient) {
+      throw new UnauthorizedException('SUPABASE_URL not configured');
     }
 
-    // Validate Supabase JWT
-    try {
-      // jsonwebtoken's verify() return type is a union that includes string,
-      // but with a secret (not RequestHandler) it always returns JwtPayload.
+    const getKey: GetPublicKeyOrSecret = (header, callback) => {
+      if (!header.kid) {
+        callback(new Error('No kid in token header'));
+        return;
+      }
+      jwksClient.getSigningKey(header.kid, (err, key) => {
+        if (err || !key) {
+          callback(err ?? new Error('Signing key not found'));
+          return;
+        }
+        callback(null, key.getPublicKey());
+      });
+    };
 
-      const decoded = verify(
-        token,
-        SUPABASE_JWT_SECRET,
-      ) as unknown as JwtPayload;
+    try {
+      const decoded = await new Promise<JwtPayload>((resolve, reject) => {
+        verify(token, getKey, (err, payload) => {
+          if (err) reject(err);
+          else resolve(payload as JwtPayload);
+        });
+      });
 
       request.supabaseUser = decoded;
       request.supabaseToken = token;
