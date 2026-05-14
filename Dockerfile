@@ -92,4 +92,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node --max-old-space-size=450 dist/src/main"]
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate resolve --rolled-back \"20250513000000_add_interest_category_status\" || true && node_modules/.bin/prisma migrate deploy && node --max-old-space-size=450 dist/src/main"]
