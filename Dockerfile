@@ -25,7 +25,7 @@ COPY prisma ./prisma/
 RUN pnpm install --frozen-lockfile
 
 # Copy the rest of the source code
-# cache-bust: 1
+# cache-bust: 2
 COPY . .
 
 # Compile TypeScript → dist/
