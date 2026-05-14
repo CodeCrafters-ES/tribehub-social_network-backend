@@ -35,6 +35,8 @@ export default defineConfig({
     seed: 'ts-node prisma/seed.ts',
   },
   datasource: {
-    url: process.env.DATABASE_URL,
+    // CLI (migrate, studio, introspect) needs a direct connection — no PgBouncer.
+    // The NestJS runtime uses DATABASE_URL (pooler) configured separately in PrismaService.
+    url: process.env.DIRECT_URL,
   },
 });

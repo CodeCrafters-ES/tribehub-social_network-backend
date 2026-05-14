@@ -91,11 +91,14 @@ model Interest {
   id        String         @id @default(uuid())
   name      String         @unique
   slug      String         @unique
+  category  String?
+  status    InterestStatus @default(ACTIVE)
   createdAt DateTime       @default(now())
 
   // Relaciones
   users     UserInterest[]
 
+  @@index([status])
   @@map("interests")
 }
 
@@ -211,6 +214,11 @@ enum UserStatus {
   ACTIVE
   SUSPENDED
   DELETED
+}
+
+enum InterestStatus {
+  ACTIVE
+  INACTIVE
 }
 
 enum AssetStatus {
