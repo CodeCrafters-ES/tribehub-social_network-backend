@@ -1,5 +1,8 @@
--- CreateEnum
-CREATE TYPE "InterestStatus" AS ENUM ('VALIDATED', 'PENDING');
+-- CreateEnum (idempotent: skip if type already exists)
+DO $$ BEGIN
+  CREATE TYPE "InterestStatus" AS ENUM ('VALIDATED', 'PENDING');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- AlterTable
 ALTER TABLE "interests"
