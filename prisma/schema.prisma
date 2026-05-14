@@ -92,11 +92,7 @@ model Interest {
   name      String         @unique
   slug      String         @unique
   category  String?
-<<<<<<< HEAD
   status    InterestStatus @default(PENDING)
-=======
-  status    InterestStatus @default(ACTIVE)
->>>>>>> origin/develop
   createdAt DateTime       @default(now())
 
   // Relaciones
