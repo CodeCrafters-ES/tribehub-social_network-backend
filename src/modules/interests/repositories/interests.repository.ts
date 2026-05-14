@@ -49,10 +49,8 @@ export class InterestsRepository {
   async setUserInterests(userId: string, interestIds: string[]): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       await tx.userInterest.deleteMany({ where: { userId } });
-      if (interestIds.length > 0) {
-        await tx.userInterest.createMany({
-          data: interestIds.map((interestId) => ({ userId, interestId })),
-        });
+      for (const interestId of interestIds) {
+        await tx.userInterest.create({ data: { userId, interestId } });
       }
     });
   }
