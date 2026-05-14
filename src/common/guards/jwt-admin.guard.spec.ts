@@ -24,7 +24,7 @@ import * as jwt from 'jsonwebtoken';
 
 // jwt.verify has multiple overloads; cast to a simple vi.Mock for type-safe
 // spy access in tests without triggering no-unsafe-* on overloaded signatures.
-// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- jwt module is fully mocked; .verify type is unresolvable at lint time
+
 const jwtVerifyMock = jwt.verify as unknown as ReturnType<typeof vi.fn>;
 
 // ---------------------------------------------------------------------------

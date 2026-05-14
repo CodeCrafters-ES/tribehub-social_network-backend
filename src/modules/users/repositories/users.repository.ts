@@ -43,4 +43,13 @@ export class UsersRepository {
       },
     });
   }
+
+  async findBySupabaseId(supabaseId: string): Promise<User | null> {
+    return this.prisma.user.findFirst({
+      where: {
+        supabaseId,
+        deletedAt: null,
+      },
+    });
+  }
 }

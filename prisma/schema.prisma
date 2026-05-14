@@ -92,7 +92,7 @@ model Interest {
   name      String         @unique
   slug      String         @unique
   category  String?
-  status    InterestStatus @default(ACTIVE)
+  status    InterestStatus @default(PENDING)
   createdAt DateTime       @default(now())
 
   // Relaciones
@@ -216,11 +216,6 @@ enum UserStatus {
   DELETED
 }
 
-enum InterestStatus {
-  ACTIVE
-  INACTIVE
-}
-
 enum AssetStatus {
   PENDING   // Presigned URL generada, cliente aún no ha subido
   UPLOADED  // Cliente completó la subida
@@ -234,4 +229,10 @@ enum ReactionType {
   WOW
   SAD
   ANGRY
+}
+
+enum InterestStatus {
+  VALIDATED
+  PENDING
+  INACTIVE
 }
