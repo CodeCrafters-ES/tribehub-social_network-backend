@@ -1,2 +1,2 @@
--- AlterEnum: add INACTIVE value to InterestStatus
-ALTER TYPE "InterestStatus" ADD VALUE 'INACTIVE';
+-- AlterEnum: add INACTIVE value to InterestStatus (idempotent)
+ALTER TYPE "InterestStatus" ADD VALUE IF NOT EXISTS 'INACTIVE';
