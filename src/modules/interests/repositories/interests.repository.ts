@@ -47,11 +47,16 @@ export class InterestsRepository {
   }
 
   async setUserInterests(userId: string, interestIds: string[]): Promise<void> {
+    console.log('[setUserInterests] userId:', userId, 'interestIds:', interestIds);
     await this.prisma.$transaction(async (tx) => {
-      await tx.userInterest.deleteMany({ where: { userId } });
+      const deleted = await tx.userInterest.deleteMany({ where: { userId } });
+      console.log('[setUserInterests] deleted:', deleted.count);
       for (const interestId of interestIds) {
-        await tx.userInterest.create({ data: { userId, interestId } });
+        const created = await tx.userInterest.create({ data: { userId, interestId } });
+        console.log('[setUserInterests] created:', created);
       }
     });
+    const check = await this.prisma.userInterest.findMany({ where: { userId } });
+    console.log('[setUserInterests] post-tx check count:', check.length);
   }
 }
