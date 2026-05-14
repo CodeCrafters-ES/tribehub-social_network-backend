@@ -1,6 +1,6 @@
 // src/modules/interests/dto/set-user-interests.dto.ts
 
-import { IsArray, IsUUID } from 'class-validator';
+import { IsArray, IsUUID, ArrayUnique } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class SetUserInterestsDto {
@@ -13,5 +13,6 @@ export class SetUserInterestsDto {
   })
   @IsArray()
   @IsUUID('4', { each: true })
+  @ArrayUnique()
   interestIds: string[];
 }

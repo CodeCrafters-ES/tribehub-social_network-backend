@@ -7,6 +7,7 @@ import type { Interest } from '@prisma/client';
 export interface InterestItem {
   id: string;
   name: string;
+  slug: string;
   category: string | null;
   status: string;
 }
@@ -39,6 +40,7 @@ export class InterestsRepository {
     return rows.map((r) => ({
       id: r.interest.id,
       name: r.interest.name,
+      slug: r.interest.slug,
       category: r.interest.category,
       status: r.interest.status,
     }));

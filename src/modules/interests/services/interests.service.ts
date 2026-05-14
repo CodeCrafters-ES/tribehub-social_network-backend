@@ -27,6 +27,7 @@ export class InterestsService {
     const items: InterestItem[] = interests.map((i) => ({
       id: i.id,
       name: i.name,
+      slug: i.slug,
       category: i.category,
       status: i.status,
     }));
