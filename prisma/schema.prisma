@@ -234,4 +234,5 @@ enum ReactionType {
 enum InterestStatus {
   VALIDATED
   PENDING
+  INACTIVE
 }
