@@ -29,7 +29,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 # Compile TypeScript → dist/
-RUN pnpm run build && echo "=== dist/src/modules ===" && ls dist/src/modules/ && echo "=== interests ===" && ls dist/src/modules/interests/ || echo "interests dir missing"
+RUN pnpm run build
 
 # ─────────────────────────────────────────────
 # Stage 2 — runner
@@ -60,11 +60,11 @@ RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 # Copy compiled output from builder
 COPY --from=builder /app/dist ./dist
 
-# Copy the compiled Prisma config to the project root.
-# prisma.config.ts defines datasource.url and is used by the Prisma CLI
-# (migrate deploy). It is compiled to dist/prisma.config.js by nest build;
-# we copy it to /app/prisma.config.js where the CLI expects it at runtime.
-COPY --from=builder /app/dist/prisma.config.js ./prisma.config.js
+# Copy the original TypeScript Prisma config to the project root.
+# Prisma 7 loads prisma.config.ts natively. The pre-compiled CommonJS output
+# (dist/prisma.config.js) includes __importDefault wrappers from esModuleInterop
+# that Prisma 7 cannot parse, so we use the source file directly.
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
 # Copy Prisma schema — needed by both `prisma migrate deploy` and
 # `prisma generate` which run at build time below.
