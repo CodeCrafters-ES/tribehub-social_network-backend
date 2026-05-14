@@ -29,7 +29,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 # Compile TypeScript → dist/
-RUN pnpm run build
+RUN pnpm run build && echo "=== dist/src/modules ===" && ls dist/src/modules/ && echo "=== interests ===" && ls dist/src/modules/interests/ || echo "interests dir missing"
 
 # ─────────────────────────────────────────────
 # Stage 2 — runner
