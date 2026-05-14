@@ -47,12 +47,13 @@ export class InterestsRepository {
   }
 
   async setUserInterests(userId: string, interestIds: string[]): Promise<void> {
-    await this.prisma.$transaction([
-      this.prisma.userInterest.deleteMany({ where: { userId } }),
-      this.prisma.userInterest.createMany({
-        data: interestIds.map((interestId) => ({ userId, interestId })),
-        skipDuplicates: true,
-      }),
-    ]);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.userInterest.deleteMany({ where: { userId } });
+      if (interestIds.length > 0) {
+        await tx.userInterest.createMany({
+          data: interestIds.map((interestId) => ({ userId, interestId })),
+        });
+      }
+    });
   }
 }
