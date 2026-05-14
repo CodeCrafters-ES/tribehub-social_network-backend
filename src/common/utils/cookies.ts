@@ -25,7 +25,7 @@ export function buildRefreshTokenCookieOptions(expiresAt: Date): CookieOptions {
   return {
     httpOnly: true,
     secure: !isDevelopment,
-    sameSite: 'strict',
+    sameSite: 'lax',
     domain: cookieDomain,
     path: REFRESH_COOKIE_PATH,
     expires: expiresAt,
@@ -40,7 +40,7 @@ export function buildCsrfCookieOptions(expiresAt: Date): CookieOptions {
   return {
     httpOnly: false,
     secure: !isDevelopment,
-    sameSite: 'strict',
+    sameSite: 'lax',
     domain: cookieDomain,
     path: COOKIE_PATH,
     expires: expiresAt,
