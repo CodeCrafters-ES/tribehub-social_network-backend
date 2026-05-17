@@ -145,4 +145,41 @@ describe('UsersRepository', () => {
       expect(result).toBeNull();
     });
   });
+
+  describe('findBySupabaseId', () => {
+    it('calls prisma.user.findFirst filtering by supabaseId and deletedAt: null', async () => {
+      mockPrismaUser.findFirst.mockResolvedValue(null);
+
+      await repository.findBySupabaseId('supabase-uuid-123');
+
+      expect(mockPrismaUser.findFirst).toHaveBeenCalledOnce();
+      expect(mockPrismaUser.findFirst).toHaveBeenCalledWith({
+        where: {
+          supabaseId: 'supabase-uuid-123',
+          deletedAt: null,
+        },
+      });
+    });
+
+    it('returns the user when found', async () => {
+      const user = {
+        id: 'uuid-1',
+        supabaseId: 'supabase-uuid-123',
+        deletedAt: null,
+      };
+      mockPrismaUser.findFirst.mockResolvedValue(user);
+
+      const result = await repository.findBySupabaseId('supabase-uuid-123');
+
+      expect(result).toEqual(user);
+    });
+
+    it('returns null when user is not found', async () => {
+      mockPrismaUser.findFirst.mockResolvedValue(null);
+
+      const result = await repository.findBySupabaseId('unknown-supabase-id');
+
+      expect(result).toBeNull();
+    });
+  });
 });

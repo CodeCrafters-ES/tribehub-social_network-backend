@@ -29,7 +29,7 @@ describe('ProfileRepository', () => {
 
       expect(mockPrismaProfile.findUnique).toHaveBeenCalledOnce();
       expect(mockPrismaProfile.findUnique).toHaveBeenCalledWith({
-        where: { userId: 'user-123' },
+        where: { userId: 'user-123', deletedAt: null },
       });
     });
 
