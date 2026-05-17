@@ -80,6 +80,7 @@ model Profile {
   isPublic    Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime? // null = activo; valor = soft deleted
 
   // Relaciones
   user        User      @relation(fields: [userId], references: [id])

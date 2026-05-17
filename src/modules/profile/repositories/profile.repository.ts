@@ -18,7 +18,7 @@ export class ProfileRepository {
    */
   async findByUserId(userId: string): Promise<Profile | null> {
     return this.prisma.profile.findUnique({
-      where: { userId },
+      where: { userId, deletedAt: null },
     });
   }
 
