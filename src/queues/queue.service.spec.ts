@@ -124,7 +124,9 @@ describe('QueueService — queue setup', () => {
     buildService();
     expect(mockQueueCtor).toHaveBeenCalledWith(
       QUEUE_NAMES.DEFAULT,
+
       expect.objectContaining({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- same as above
         defaultJobOptions: expect.objectContaining({
           attempts: 3,
           removeOnFail: { count: 500 },

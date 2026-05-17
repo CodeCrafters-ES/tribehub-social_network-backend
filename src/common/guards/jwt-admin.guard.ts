@@ -62,7 +62,10 @@ export class JwtAdminGuard implements CanActivate {
     let decoded: SupabaseJwtPayload;
 
     try {
-      decoded = verify(token, jwtSecret) as SupabaseJwtPayload;
+      // jsonwebtoken's verify() return type is a union that includes string,
+      // but with a secret (not RequestHandler) it always returns a JwtPayload object.
+
+      decoded = verify(token, jwtSecret) as unknown as SupabaseJwtPayload;
     } catch (err) {
       const name = err instanceof Error ? err.name : '';
       if (name === 'TokenExpiredError') {

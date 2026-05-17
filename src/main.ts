@@ -118,7 +118,10 @@ async function bootstrap() {
       }
 
       try {
-        const decoded = verify(token, jwtSecret) as {
+        // jsonwebtoken's verify() return type is a union that includes string,
+        // but with a secret (not RequestHandler) it always returns a JwtPayload object.
+
+        const decoded = verify(token, jwtSecret) as unknown as {
           app_metadata?: { role?: string };
         };
 

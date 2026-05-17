@@ -10,7 +10,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
-import { JwtAdminGuard } from './jwt-admin.guard';
+import { JwtAdminGuard, type SupabaseJwtPayload } from './jwt-admin.guard';
 
 // ---------------------------------------------------------------------------
 // Mock jsonwebtoken
@@ -21,6 +21,11 @@ vi.mock('jsonwebtoken', () => ({
 }));
 
 import * as jwt from 'jsonwebtoken';
+
+// jwt.verify has multiple overloads; cast to a simple vi.Mock for type-safe
+// spy access in tests without triggering no-unsafe-* on overloaded signatures.
+
+const jwtVerifyMock = jwt.verify as unknown as ReturnType<typeof vi.fn>;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -85,7 +90,7 @@ describe('JwtAdminGuard', () => {
 
     const error = new Error('jwt expired');
     error.name = 'TokenExpiredError';
-    vi.mocked(jwt.verify).mockImplementation(() => {
+    jwtVerifyMock.mockImplementation(() => {
       throw error;
     });
 
@@ -98,7 +103,7 @@ describe('JwtAdminGuard', () => {
 
     const error = new Error('invalid signature');
     error.name = 'JsonWebTokenError';
-    vi.mocked(jwt.verify).mockImplementation(() => {
+    jwtVerifyMock.mockImplementation(() => {
       throw error;
     });
 
@@ -111,7 +116,7 @@ describe('JwtAdminGuard', () => {
 
     const error = new Error('jwt not active');
     error.name = 'NotBeforeError';
-    vi.mocked(jwt.verify).mockImplementation(() => {
+    jwtVerifyMock.mockImplementation(() => {
       throw error;
     });
 
@@ -122,10 +127,10 @@ describe('JwtAdminGuard', () => {
     const guard = buildGuard();
     const context = buildContext({ authorization: 'Bearer valid.user.token' });
 
-    vi.mocked(jwt.verify).mockReturnValue({
+    jwtVerifyMock.mockReturnValue({
       sub: 'user-123',
       app_metadata: { role: 'user' },
-    } as never);
+    });
 
     expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
   });
@@ -136,9 +141,9 @@ describe('JwtAdminGuard', () => {
       authorization: 'Bearer valid.nometadata.token',
     });
 
-    vi.mocked(jwt.verify).mockReturnValue({
+    jwtVerifyMock.mockReturnValue({
       sub: 'user-456',
-    } as never);
+    });
 
     expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
   });
@@ -151,13 +156,15 @@ describe('JwtAdminGuard', () => {
       sub: 'admin-789',
       app_metadata: { role: 'admin' },
     };
-    vi.mocked(jwt.verify).mockReturnValue(decoded as never);
+    jwtVerifyMock.mockReturnValue(decoded);
 
     const result = guard.canActivate(context);
 
     expect(result).toBe(true);
 
-    const request = context.switchToHttp().getRequest();
+    const request = context
+      .switchToHttp()
+      .getRequest<{ supabaseUser: SupabaseJwtPayload }>();
     expect(request.supabaseUser).toEqual(decoded);
   });
 

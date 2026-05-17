@@ -12,6 +12,7 @@ import { ObservabilityModule } from './observability/observability.module';
 import { SentryExceptionFilter } from './common/filters/sentry-exception.filter';
 import { HttpMetricsInterceptor } from './observability/http-metrics.interceptor';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
+import { InterestsModule } from './modules/interests/interests.module';
 import { FeedModule } from './modules/feed/feed.module';
 import { SearchModule } from './modules/search/search.module';
 import { QueuesModule } from './queues/queues.module';
@@ -35,6 +36,7 @@ import { ProfileModule } from './modules/profile/profile.module';
     HealthModule,
     ObservabilityModule,
     SystemConfigModule,
+    InterestsModule,
     FeedModule,
     SearchModule,
     QueuesModule,

@@ -44,30 +44,12 @@ export class UsersRepository {
     });
   }
 
-  /**
-   * Ensures a user exists in the database, creating or updating as needed.
-   * Used by SupabaseAuthGuard to sync users from Supabase Auth.
-   * Returns the internal user ID.
-   */
-  async ensureUserExists(
-    supabaseId: string,
-    email: string,
-  ): Promise<string | undefined> {
-    const username = email.split('@')[0] || `user_${supabaseId.slice(0, 8)}`;
-
-    const result = await this.prisma.user.upsert({
-      where: { supabaseId },
-      create: {
+  async findBySupabaseId(supabaseId: string): Promise<User | null> {
+    return this.prisma.user.findFirst({
+      where: {
         supabaseId,
-        email,
-        username,
-        status: 'ACTIVE',
-      },
-      update: {
-        email,
+        deletedAt: null,
       },
     });
-
-    return result.id;
   }
 }

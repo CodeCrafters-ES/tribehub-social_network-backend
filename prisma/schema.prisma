@@ -91,11 +91,14 @@ model Interest {
   id        String         @id @default(uuid())
   name      String         @unique
   slug      String         @unique
+  category  String?
+  status    InterestStatus @default(PENDING)
   createdAt DateTime       @default(now())
 
   // Relaciones
   users     UserInterest[]
 
+  @@index([status])
   @@map("interests")
 }
 
@@ -226,4 +229,10 @@ enum ReactionType {
   WOW
   SAD
   ANGRY
+}
+
+enum InterestStatus {
+  VALIDATED
+  PENDING
+  INACTIVE
 }

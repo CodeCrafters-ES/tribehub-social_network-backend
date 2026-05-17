@@ -56,8 +56,8 @@ export class AuthController {
       }
       const message = error instanceof Error ? error.message : 'Unknown error';
       throw new BadRequestException({
-        code: 'REGISTER_ERROR',
         message,
+        code: 'REGISTER_ERROR',
       });
     }
   }
@@ -78,8 +78,8 @@ export class AuthController {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       throw new BadRequestException({
-        code: 'LOGIN_ERROR',
         message,
+        code: 'LOGIN_ERROR',
       });
     }
   }
