@@ -10,7 +10,11 @@ import { PrismaService } from './../src/prisma/prisma.service';
 // getRedisConnection() throws at module load time when REDIS_URL is absent.
 // Pointing to localhost is sufficient for the module to boot; a live Redis
 // connection is not required for the health/root endpoint test.
+// SupabaseAuthGuard throws at guard instantiation when SUPABASE_URL is absent.
 process.env.REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
+process.env.SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://localhost:54321';
+process.env.SUPABASE_ANON_KEY =
+  process.env.SUPABASE_ANON_KEY ?? 'test-anon-key';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
@@ -31,7 +35,13 @@ describe('AppController (e2e)', () => {
   });
 
   afterEach(async () => {
-    await app.close();
+    // Gracefully close the app, ignoring errors from already-closed Redis connections.
+    // This prevents "Connection is closed" errors during teardown from failing tests.
+    try {
+      await app.close();
+    } catch {
+      // App already closed or connection errors - safe to ignore
+    }
   });
 
   it('/ (GET)', () => {

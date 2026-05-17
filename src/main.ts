@@ -74,6 +74,7 @@ async function bootstrap() {
       'X-Requested-With',
       'Accept',
       'Origin',
+      'X-Request-Id',
       'Access-Control-Request-Method',
       'Access-Control-Request-Headers',
     ],
