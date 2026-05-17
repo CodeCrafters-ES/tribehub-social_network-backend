@@ -21,10 +21,15 @@ describe('UsersService', () => {
       const existingUser = { id: 'internal-uuid-1', supabaseId: 'supa-abc123' };
       mockUsersRepository.findBySupabaseId.mockResolvedValue(existingUser);
 
-      const result = await service.ensureUserExists('supa-abc123', 'alex@example.com');
+      const result = await service.ensureUserExists(
+        'supa-abc123',
+        'alex@example.com',
+      );
 
       expect(mockUsersRepository.findBySupabaseId).toHaveBeenCalledOnce();
-      expect(mockUsersRepository.findBySupabaseId).toHaveBeenCalledWith('supa-abc123');
+      expect(mockUsersRepository.findBySupabaseId).toHaveBeenCalledWith(
+        'supa-abc123',
+      );
       expect(mockUsersRepository.create).not.toHaveBeenCalled();
       expect(result).toBe('internal-uuid-1');
     });
@@ -34,7 +39,10 @@ describe('UsersService', () => {
       const createdUser = { id: 'internal-uuid-2', supabaseId: 'supa-newuser' };
       mockUsersRepository.create.mockResolvedValue(createdUser);
 
-      const result = await service.ensureUserExists('supa-newuser', 'newuser@example.com');
+      const result = await service.ensureUserExists(
+        'supa-newuser',
+        'newuser@example.com',
+      );
 
       expect(mockUsersRepository.findBySupabaseId).toHaveBeenCalledOnce();
       expect(mockUsersRepository.create).toHaveBeenCalledOnce();
@@ -51,7 +59,10 @@ describe('UsersService', () => {
       mockUsersRepository.findBySupabaseId.mockResolvedValue(null);
       mockUsersRepository.create.mockResolvedValue({ id: 'uuid-3' });
 
-      await service.ensureUserExists('abcdefgh-1234-5678', 'john.doe@tribehub.app');
+      await service.ensureUserExists(
+        'abcdefgh-1234-5678',
+        'john.doe@tribehub.app',
+      );
 
       expect(mockUsersRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({

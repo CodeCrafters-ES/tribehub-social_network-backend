@@ -27,7 +27,9 @@ export class UpdateProfileDto {
   @MaxLength(50, {
     message: 'Display name must be at most 50 characters',
   })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   displayName?: string;
 
   @IsOptional()
@@ -35,7 +37,9 @@ export class UpdateProfileDto {
   @MaxLength(160, {
     message: 'Bio must be at most 160 characters',
   })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   bio?: string;
 
   @IsOptional()
