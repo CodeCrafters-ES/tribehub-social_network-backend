@@ -14,7 +14,7 @@ import type { JwtPayload } from 'jsonwebtoken';
 import jwksRsa from 'jwks-rsa';
 import type { JwksClient } from 'jwks-rsa';
 import { SecurityMonitorService } from '../../observability/alerts/security-monitor.service';
-import { UsersRepository } from '../../modules/users/repositories/users.repository';
+import { UsersService } from '../../modules/users/users.service';
 
 const jwt = jsonwebtoken;
 
@@ -33,7 +33,7 @@ export class SupabaseAuthGuard implements CanActivate {
   constructor(
     private readonly configService: ConfigService,
     private readonly securityMonitor: SecurityMonitorService,
-    private readonly usersRepository: UsersRepository,
+    private readonly usersService: UsersService,
   ) {
     // Initialize JWKS client for ES256 tokens from Supabase
     const supabaseUrl = this.configService.getOrThrow<string>('SUPABASE_URL');
@@ -131,7 +131,7 @@ export class SupabaseAuthGuard implements CanActivate {
     }
 
     try {
-      return await this.usersRepository.ensureUserExists(supabaseId, email);
+      return await this.usersService.ensureUserExists(supabaseId, email);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
