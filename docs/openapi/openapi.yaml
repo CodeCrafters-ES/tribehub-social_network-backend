@@ -170,22 +170,40 @@ paths:
       tags:
         - Auth
       security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RefreshRequest'
+        - RefreshTokenCookie: []
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
+          description: CSRF token value from XSRF-TOKEN cookie
       responses:
         '200':
-          description: Tokens rotated successfully
+          description: Tokens rotated successfully. Sets new refresh cookie and XSRF cookie.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoginResponse'
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      accessToken:
+                        type: string
+                  message:
+                    type: string
         '401':
           description: Refresh token invalid, expired, or blacklisted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Invalid CSRF token
           content:
             application/json:
               schema:
@@ -198,12 +216,24 @@ paths:
       tags:
         - Auth
       security:
-        - BearerAuth: []
+        - RefreshTokenCookie: []
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
       responses:
         '204':
           description: Session revoked successfully
         '401':
-          description: Missing or invalid access token
+          description: Missing or invalid refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Invalid CSRF token
           content:
             application/json:
               schema:
@@ -215,6 +245,10 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    RefreshTokenCookie:
+      type: apiKey
+      in: cookie
+      name: refresh_token
 
   schemas:
     RegisterRequest:
@@ -261,20 +295,6 @@ components:
         accessToken:
           type: string
           description: 'Short-lived JWT access token (Authorization: Bearer)'
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        refreshToken:
-          type: string
-          description: Long-lived refresh token used to rotate the session
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-
-    RefreshRequest:
-      type: object
-      required:
-        - refreshToken
-      properties:
-        refreshToken:
-          type: string
-          description: Refresh token obtained at login
           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
     ErrorResponse:
