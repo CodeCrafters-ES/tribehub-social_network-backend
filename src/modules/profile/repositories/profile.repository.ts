@@ -1,7 +1,7 @@
 // src/modules/profile/repositories/profile.repository.ts
 
 import { Injectable } from '@nestjs/common';
-import type { PrismaClient, Profile } from '@prisma/client';
+import type { Profile } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 
 /**
@@ -17,8 +17,7 @@ export class ProfileRepository {
    * Returns null if profile doesn't exist.
    */
   async findByUserId(userId: string): Promise<Profile | null> {
-    const client = this.prisma as unknown as PrismaClient;
-    return client.profile.findUnique({
+    return this.prisma.profile.findUnique({
       where: { userId },
     });
   }
@@ -35,8 +34,7 @@ export class ProfileRepository {
       avatarUrl?: string | null;
     },
   ): Promise<Profile> {
-    const client = this.prisma as unknown as PrismaClient;
-    return client.profile.upsert({
+    return this.prisma.profile.upsert({
       where: { userId },
       create: { userId, ...data },
       update: data,
@@ -56,8 +54,7 @@ export class ProfileRepository {
       isPublic?: boolean;
     },
   ): Promise<Profile> {
-    const client = this.prisma as unknown as PrismaClient;
-    return client.profile.update({
+    return this.prisma.profile.update({
       where: { userId },
       data,
     });
