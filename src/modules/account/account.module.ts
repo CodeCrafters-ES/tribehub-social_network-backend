@@ -4,9 +4,10 @@ import { AccountService } from './account.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthModule } from '../../auth/auth.module';
 import { ObservabilityModule } from '../../observability/observability.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [AuthModule, ObservabilityModule],
+  imports: [AuthModule, ObservabilityModule, UsersModule],
   controllers: [AccountController],
   providers: [AccountService, PrismaService],
 })

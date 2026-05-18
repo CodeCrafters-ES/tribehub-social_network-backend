@@ -1,16 +1,16 @@
 import { vi } from 'vitest';
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { TestingModule } from '@nestjs/testing';
+import { INestApplication, ValidationPipe, ExecutionContext } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import cookieParser from 'cookie-parser';
-import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/prisma/prisma.service';
 import { AccountService } from './../src/modules/account/account.service';
 import { SupabaseAuthGuard } from './../src/auth/guards/supabase-auth.guard';
-import { ExecutionContext } from '@nestjs/common';
+import { createTestAppBuilder } from './test-app.factory';
 
-process.env.REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
+// Environment stubs (REDIS_URL, SUPABASE_*) are set by test/setup-integration.ts
+// which vitest.integration.config.ts lists in setupFiles. No env setup needed here.
 
 const MOCK_USER_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 const MOCK_DELETE_REQUEST_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
@@ -31,9 +31,7 @@ describe('Account Deletion (e2e)', () => {
       confirmDeleteRequest: vi.fn(),
     };
 
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    })
+    const moduleFixture: TestingModule = await createTestAppBuilder()
       .overrideGuard(SupabaseAuthGuard)
       .useValue({
         canActivate: (context: ExecutionContext) => {
@@ -56,7 +54,7 @@ describe('Account Deletion (e2e)', () => {
   });
 
   afterEach(async () => {
-    await app.close();
+    if (app) await app.close();
   });
 
   describe('POST /api/v1/account/delete/request', () => {

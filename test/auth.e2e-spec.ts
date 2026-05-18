@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { Test, TestingModule } from '@nestjs/testing';
+import { TestingModule } from '@nestjs/testing';
 import {
   INestApplication,
   ValidationPipe,
@@ -11,38 +11,16 @@ import { ValidationError } from 'class-validator';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import cookieParser from 'cookie-parser';
-import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/prisma/prisma.service';
 import { AuthService } from './../src/auth/auth.service';
+import { createTestAppBuilder } from './test-app.factory';
 
 interface ValidationErrorBody {
   errors: Array<{ field: string; errors: string[] }>;
 }
 
-// Ensure Redis URL is present so modules that read it at load time do not throw.
-process.env.REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
-// SupabaseAuthGuard throws at guard instantiation when SUPABASE_URL is absent.
-process.env.SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://localhost:54321';
-process.env.SUPABASE_ANON_KEY =
-  process.env.SUPABASE_ANON_KEY ?? 'test-anon-key';
-process.env.SUPABASE_SERVICE_ROLE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'test-service-role-key';
-
-// Catch unhandled Redis connection errors that occur during app teardown.
-// These errors happen when BullMQ workers try to use Redis connections that
-// have been closed by NestJS during app.close(). They are safe to ignore.
-process.on('unhandledRejection', (reason: unknown) => {
-  if (
-    reason instanceof Error &&
-    (reason.message === 'Connection is closed.' ||
-      reason.message.includes('Connection is closed'))
-  ) {
-    // Ignore Redis connection errors during teardown - they're expected
-    return;
-  }
-  // Re-throw other unhandled rejections
-  throw reason;
-});
+// Environment stubs (REDIS_URL, SUPABASE_*) are set by test/setup-integration.ts
+// which vitest.integration.config.ts lists in setupFiles. No env setup needed here.
 
 // ---------------------------------------------------------------------------
 // Shared mock data
@@ -104,9 +82,7 @@ describe('POST /api/v1/auth/register (e2e)', () => {
   beforeEach(async () => {
     mockRegister = vi.fn();
 
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    })
+    const moduleFixture: TestingModule = await createTestAppBuilder()
       .overrideProvider(PrismaService)
       .useValue({
         $connect: vi.fn(),
@@ -126,13 +102,7 @@ describe('POST /api/v1/auth/register (e2e)', () => {
   });
 
   afterEach(async () => {
-    // Gracefully close the app, ignoring errors from already-closed Redis connections.
-    // This prevents "Connection is closed" errors during teardown from failing tests.
-    try {
-      await app.close();
-    } catch {
-      // App already closed or connection errors - safe to ignore
-    }
+    await app.close();
   });
 
   // -------------------------------------------------------------------------
