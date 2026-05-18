@@ -83,6 +83,27 @@ Para pararlos: `docker compose down`. Para pararlos y borrar los datos persistid
 > docker run -d --name tribehub-redis -p 6379:6379 redis:alpine
 > ```
 
+#### Conflicto de puerto en Windows
+
+Si tenes PostgreSQL instalado localmente en Windows, puede haber conflicto con el puerto 5432 de Docker. Esto se manifiesta como "connection refused" al intentar conectar la app a la base de datos.
+
+**Solucion:** Actualizar el `DATABASE_URL` en `.env.development` para usar un puerto distinto:
+
+```env
+DATABASE_URL=postgresql://tribehub:tribehub@localhost:5433/tribehub_dev
+```
+
+Para que Docker levante PostgreSQL en el puerto 5433, podeis ejecutar:
+
+```bash
+docker run -d --name tribehub-db \
+  -e POSTGRES_USER=tribehub \
+  -e POSTGRES_PASSWORD=tribehub \
+  -e POSTGRES_DB=tribehub_dev \
+  -p 5433:5432 \
+  postgres:16-alpine
+```
+
 ### 5. Aplicar migraciones de base de datos
 
 ```bash
