@@ -85,7 +85,11 @@ export function createTestAppBuilder(): TestingModuleBuilder {
   // Stub Express adapter returned by BullboardModule so that its useFactory
   // never reaches QueueService (and therefore never touches ioredis).
   const bullboardAdapterStub = {
-    getRouter: vi.fn().mockReturnValue((_req: unknown, _res: unknown, next: () => void) => next()),
+    getRouter: vi
+      .fn()
+      .mockReturnValue((_req: unknown, _res: unknown, next: () => void) =>
+        next(),
+      ),
   };
 
   return Test.createTestingModule({ imports: [AppModule] })
