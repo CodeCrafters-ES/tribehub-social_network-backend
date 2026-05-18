@@ -348,7 +348,7 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .send(VALID_PAYLOAD)
       .expect(400);
 
-// NestJS v11: getResponse() returns the raw object passed to BadRequestException.
+    // NestJS v11: getResponse() returns the raw object passed to BadRequestException.
     // The SentryExceptionFilter ensures statusCode is present in the body.
     // { code: 'REGISTER_ERROR', message: error.message } → body becomes
     // { statusCode: 400, code: 'REGISTER_ERROR', message: 'Supabase is down' }
