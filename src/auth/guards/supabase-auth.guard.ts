@@ -18,7 +18,7 @@ import { UsersService } from '../../modules/users/users.service';
 
 const jwt = jsonwebtoken;
 
-type AuthenticatedRequest = Request & {
+export type AuthenticatedRequest = Request & {
   supabaseUser: JwtPayload;
   supabaseToken: string;
   /** Internal user ID from public.users table */

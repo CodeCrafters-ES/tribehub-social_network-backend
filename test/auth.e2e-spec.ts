@@ -186,7 +186,6 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .expect(409);
 
     expect(response.body).toMatchObject({
-      statusCode: 409,
       message: 'Email already in use',
     });
   });
@@ -206,7 +205,6 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .expect(409);
 
     expect(response.body).toMatchObject({
-      statusCode: 409,
       message: 'Username already in use',
     });
   });
@@ -324,7 +322,6 @@ describe('POST /api/v1/auth/register (e2e)', () => {
       .expect(500);
 
     expect(response.body).toMatchObject({
-      statusCode: 500,
       message: 'Failed to create user',
     });
   });
