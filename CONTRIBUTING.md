@@ -85,15 +85,22 @@ Para pararlos: `docker compose down`. Para pararlos y borrar los datos persistid
 
 #### Conflicto de puerto en Windows
 
-Si tenes PostgreSQL instalado localmente en Windows, puede haber conflicto con el puerto 5432 de Docker. Esto se manifiesta como "connection refused" al intentar conectar la app a la base de datos.
+Si tienes PostgreSQL instalado localmente en Windows, puede haber conflicto con el puerto 5432 de Docker. Esto se manifiesta como "connection refused" al intentar conectar la app a la base de datos.
 
-**Solucion:** Actualizar el `DATABASE_URL` en `.env.development` para usar un puerto distinto:
+**Si usas `docker compose up`:** agrega `POSTGRES_HOST_PORT` en tu `.env.development` local (sin modificar el `docker-compose.yml` compartido) y actualiza el `DATABASE_URL`:
+
+```env
+POSTGRES_HOST_PORT=5433
+DATABASE_URL=postgresql://tribehub:tribehub@localhost:5433/tribehub_dev
+```
+
+El `docker-compose.yml` soporta esta variable con el valor por defecto `5432`, así que solo necesitas definirla cuando tengas el conflicto. Los que no tienen el conflicto no necesitan cambiar nada.
+
+**Si levantas PostgreSQL manualmente con `docker run`:** mapea el puerto distinto en el comando y actualiza el `DATABASE_URL`:
 
 ```env
 DATABASE_URL=postgresql://tribehub:tribehub@localhost:5433/tribehub_dev
 ```
-
-Para que Docker levante PostgreSQL en el puerto 5433, podeis ejecutar:
 
 ```bash
 docker run -d --name tribehub-db \
