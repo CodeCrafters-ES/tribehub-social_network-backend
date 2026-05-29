@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
+import { timingSafeEqual } from 'crypto';
 import type { Request } from 'express';
 import { XSRF_TOKEN_COOKIE } from '../../common/utils/cookies';
 
@@ -19,10 +20,19 @@ export class CsrfGuard implements CanActivate {
       typeof csrfHeader === 'string' ? csrfHeader.trim() : undefined;
     const cookieToken = csrfCookie?.trim();
 
-    if (!headerToken || !cookieToken || headerToken !== cookieToken) {
+    if (!headerToken || !cookieToken || !this.safeEqual(headerToken, cookieToken)) {
       throw new ForbiddenException('Forbidden');
     }
 
     return true;
+  }
+
+  private safeEqual(a: string, b: string): boolean {
+    const bufA = Buffer.from(a);
+    const bufB = Buffer.from(b);
+    if (bufA.length !== bufB.length) {
+      return false;
+    }
+    return timingSafeEqual(bufA, bufB);
   }
 }
