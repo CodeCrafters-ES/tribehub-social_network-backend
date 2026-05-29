@@ -5,13 +5,14 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { AuthRepository } from './repositories/auth.repository';
 import { SupabaseAuthGuard } from './guards/supabase-auth.guard';
+import { CsrfGuard } from '../common/guards/csrf.guard';
 import { UsersModule } from '../modules/users/users.module';
 import { ObservabilityModule } from '../observability/observability.module';
 
 @Module({
   imports: [UsersModule, ObservabilityModule],
   controllers: [AuthController],
-  providers: [AuthService, AuthRepository, SupabaseAuthGuard],
+  providers: [AuthService, AuthRepository, SupabaseAuthGuard, CsrfGuard],
   exports: [SupabaseAuthGuard],
 })
 export class AuthModule {}

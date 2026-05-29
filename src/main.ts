@@ -18,7 +18,7 @@ async function bootstrap() {
 
   app.use(cookieParser());
 
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('/api/v1');
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -71,6 +71,7 @@ async function bootstrap() {
     allowedHeaders: [
       'Content-Type',
       'Authorization',
+      'X-CSRF-Token',
       'X-Requested-With',
       'Accept',
       'Origin',

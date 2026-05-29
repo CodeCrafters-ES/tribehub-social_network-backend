@@ -66,7 +66,7 @@ describe('clearAuthCookies', () => {
     expect(options.httpOnly).toBe(false);
   });
 
-  it('uses path "/" for both cookies', () => {
+  it('uses restricted path for refresh cookie and root path for XSRF cookie', () => {
     const res = buildMockRes();
 
     clearAuthCookies(res);
@@ -76,9 +76,10 @@ describe('clearAuthCookies', () => {
       Record<string, unknown>,
     ][];
 
-    for (const [, options] of calls) {
-      expect(options.path).toBe('/');
-    }
+    const refreshCall = calls.find(([name]) => name === REFRESH_TOKEN_COOKIE);
+    const xsrfCall = calls.find(([name]) => name === XSRF_TOKEN_COOKIE);
+    expect(refreshCall?.[1].path).toBe('/api/v1/auth');
+    expect(xsrfCall?.[1].path).toBe('/');
   });
 
   it('does not set domain in development', () => {
