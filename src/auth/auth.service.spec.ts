@@ -201,7 +201,11 @@ describe('AuthService.login', () => {
       email: dto.email,
       password: dto.password,
     });
-    expect(result).toEqual(sessionData);
+    expect(result).toEqual({
+      session: sessionData.session,
+      user: sessionData.user,
+      csrfToken: expect.any(String),
+    });
   });
 
   it('persists hashed refresh token on successful login when local user exists', async () => {
