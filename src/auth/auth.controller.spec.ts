@@ -140,6 +140,7 @@ describe('AuthController', () => {
       await expect(controller.refresh(req, res)).rejects.toThrow(
         'Unauthorized',
       );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(service.refreshSession).not.toHaveBeenCalled();
     });
   });

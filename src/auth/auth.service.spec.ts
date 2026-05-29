@@ -204,7 +204,7 @@ describe('AuthService.login', () => {
     expect(result).toEqual({
       session: sessionData.session,
       user: sessionData.user,
-      csrfToken: expect.any(String),
+      csrfToken: expect.any(String) as unknown,
     });
   });
 
