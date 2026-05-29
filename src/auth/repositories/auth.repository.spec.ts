@@ -252,7 +252,10 @@ describe('AuthRepository', () => {
       mockPrismaRefreshToken.updateMany.mockResolvedValue({ count: 0 });
 
       await expect(
-        repository.revokeAllActiveUserTokens('user-no-tokens', 'reuse_detected'),
+        repository.revokeAllActiveUserTokens(
+          'user-no-tokens',
+          'reuse_detected',
+        ),
       ).resolves.toBeUndefined();
     });
   });
