@@ -156,7 +156,11 @@ export class AuthService {
       }
     }
 
-    return signInData;
+    return {
+      session: signInData.session,
+      user: signInData.user,
+      csrfToken: this.generateCsrfToken(),
+    };
   }
 
   async refreshSession(params: {

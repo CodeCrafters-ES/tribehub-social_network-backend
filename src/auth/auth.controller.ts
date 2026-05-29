@@ -14,7 +14,6 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { randomBytes } from 'crypto';
 import {
   ApiTags,
   ApiOperation,
@@ -103,7 +102,7 @@ export class AuthController {
       }
 
       const refreshExpiresAt = new Date(Date.now() + this.refreshTtlMs);
-      const csrfToken = randomBytes(32).toString('base64url');
+      const { csrfToken } = result;
 
       res.cookie(
         REFRESH_TOKEN_COOKIE,
