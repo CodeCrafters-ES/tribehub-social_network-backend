@@ -40,9 +40,6 @@ import { CsrfGuard } from '../common/guards/csrf.guard';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  private readonly refreshTtlMs =
-    Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? '7') * 24 * 60 * 60 * 1000;
-
   constructor(private readonly authService: AuthService) {}
 
   @ApiOperation({ summary: 'Register a new user' })
@@ -116,7 +113,7 @@ export class AuthController {
       throw new UnauthorizedException('Invalid authentication response');
     }
 
-    const refreshExpiresAt = new Date(Date.now() + this.refreshTtlMs);
+    const { refreshExpiresAt } = result;
     // Supabase access tokens expire in `expires_in` seconds (default 3600).
     // Fall back to 3600 s if the field is absent.
     const accessTokenTtlMs =

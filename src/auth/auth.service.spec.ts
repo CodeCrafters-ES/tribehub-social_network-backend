@@ -213,6 +213,7 @@ describe('AuthService.login', () => {
       session: sessionData.session,
       localUser: { id: 'local-uuid-1', username: 'testuser', email: dto.email },
       csrfToken: expect.any(String) as unknown,
+      refreshExpiresAt: expect.any(Date) as unknown,
     });
     // localUser must NOT expose passwordHash
     expect(result.localUser).not.toHaveProperty('passwordHash');
