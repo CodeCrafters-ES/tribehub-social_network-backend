@@ -194,6 +194,10 @@ paths:
                     properties:
                       accessToken:
                         type: string
+                      expiresIn:
+                        type: integer
+                        description: Access token lifetime in seconds
+                        example: 3600
                   message:
                     type: string
         '401':

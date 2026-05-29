@@ -179,6 +179,7 @@ export class AuthController {
       success: true,
       data: {
         accessToken: result.accessToken,
+        expiresIn: result.expiresIn,
       },
       message: 'Refresh successful',
     };

@@ -165,6 +165,7 @@ export class AuthService {
     userAgent?: string;
   }): Promise<{
     accessToken: string;
+    expiresIn: number;
     refreshToken: string;
     refreshExpiresAt: Date;
     csrfToken: string;
@@ -224,6 +225,7 @@ export class AuthService {
 
     return {
       accessToken: data.session.access_token,
+      expiresIn: data.session.expires_in,
       refreshToken: nextRefreshToken,
       refreshExpiresAt: nextExpiry,
       csrfToken: this.generateCsrfToken(),
