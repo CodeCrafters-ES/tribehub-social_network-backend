@@ -92,11 +92,5 @@
   },
   "prisma": {
     "seed": "ts-node --project tsconfig.json -e 'require(\"tsconfig-paths/register\")' prisma/seed.ts"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [],
-    "overrides": {
-      "rollup": "4.60.1"
-    }
   }
 }
