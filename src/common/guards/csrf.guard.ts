@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { timingSafeEqual } from 'crypto';
 import type { Request } from 'express';
-import { XSRF_TOKEN_COOKIE } from '../../common/utils/cookies';
+import { XSRF_TOKEN_COOKIE } from '../utils/cookies';
 
 @Injectable()
 export class CsrfGuard implements CanActivate {

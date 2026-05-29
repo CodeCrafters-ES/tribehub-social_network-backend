@@ -32,7 +32,7 @@ import {
   buildRefreshTokenCookieOptions,
   buildCsrfCookieOptions,
 } from '../common/utils/cookies';
-import { CsrfGuard } from './guards/csrf.guard';
+import { CsrfGuard } from '../common/guards/csrf.guard';
 
 @ApiTags('auth')
 @Controller('auth')
