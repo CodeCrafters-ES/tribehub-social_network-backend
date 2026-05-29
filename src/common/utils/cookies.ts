@@ -7,6 +7,9 @@
 
 import type { CookieOptions, Response } from 'express';
 
+/** Name of the httpOnly access-token cookie. */
+export const ACCESS_TOKEN_COOKIE = 'access_token';
+
 /** Name of the httpOnly refresh-token cookie. */
 export const REFRESH_TOKEN_COOKIE = 'refresh_token';
 
@@ -15,7 +18,24 @@ export const XSRF_TOKEN_COOKIE = 'XSRF-TOKEN';
 
 /** Shared cookie path. */
 const COOKIE_PATH = '/';
-const REFRESH_COOKIE_PATH = '/api/v1/auth';
+
+/** Path scoped to the refresh endpoint only — limits cookie exposure. */
+const REFRESH_COOKIE_PATH = '/api/v1/auth/refresh';
+
+export function buildAccessTokenCookieOptions(expiresAt: Date): CookieOptions {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const cookieDomain = isProduction ? '.tribehub.io' : undefined;
+
+  return {
+    httpOnly: true,
+    secure: !isDevelopment,
+    sameSite: 'lax',
+    domain: cookieDomain,
+    path: COOKIE_PATH,
+    expires: expiresAt,
+  };
+}
 
 export function buildRefreshTokenCookieOptions(expiresAt: Date): CookieOptions {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -48,7 +68,8 @@ export function buildCsrfCookieOptions(expiresAt: Date): CookieOptions {
 }
 
 /**
- * Clears both the `refresh_token` and `XSRF-TOKEN` cookies from the response.
+ * Clears the `access_token`, `refresh_token`, and `XSRF-TOKEN` cookies from
+ * the response.
  *
  * The options passed to `res.clearCookie()` MUST match the options used when
  * the cookies were set; otherwise the browser will not honour the deletion.
@@ -57,6 +78,12 @@ export function buildCsrfCookieOptions(expiresAt: Date): CookieOptions {
  * flag are applied regardless of when the module was first loaded.
  */
 export function clearAuthCookies(res: Response): void {
+  res.clearCookie(ACCESS_TOKEN_COOKIE, {
+    ...buildAccessTokenCookieOptions(new Date(0)),
+    expires: undefined,
+    maxAge: 0,
+  });
+
   res.clearCookie(REFRESH_TOKEN_COOKIE, {
     ...buildRefreshTokenCookieOptions(new Date(0)),
     expires: undefined,
