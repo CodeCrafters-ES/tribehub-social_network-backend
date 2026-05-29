@@ -135,7 +135,9 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @UseGuards(CsrfGuard)
-  @ApiOperation({ summary: 'Rotate refresh token and obtain a new access token' })
+  @ApiOperation({
+    summary: 'Rotate refresh token and obtain a new access token',
+  })
   @ApiCookieAuth(REFRESH_TOKEN_COOKIE)
   @ApiHeader({ name: 'X-CSRF-Token', required: true })
   @ApiResponse({

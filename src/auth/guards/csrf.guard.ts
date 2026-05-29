@@ -20,7 +20,11 @@ export class CsrfGuard implements CanActivate {
       typeof csrfHeader === 'string' ? csrfHeader.trim() : undefined;
     const cookieToken = csrfCookie?.trim();
 
-    if (!headerToken || !cookieToken || !this.safeEqual(headerToken, cookieToken)) {
+    if (
+      !headerToken ||
+      !cookieToken ||
+      !this.safeEqual(headerToken, cookieToken)
+    ) {
       throw new ForbiddenException('Forbidden');
     }
 
