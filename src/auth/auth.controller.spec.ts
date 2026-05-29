@@ -58,11 +58,16 @@ describe('AuthController', () => {
     );
   });
 
-  it('should login a user', async () => {
+  it('should login a user and set three cookies (access_token, refresh_token, XSRF-TOKEN)', async () => {
     const dto: LoginDto = { email: 'test@gmail.com', password: 'password123' };
     (service.login as Mock).mockResolvedValue({
-      session: { access_token: 'access-jwt', refresh_token: 'refresh-jwt' },
-      user: { id: 'user-id', email: 'test@gmail.com' },
+      session: {
+        access_token: 'access-jwt',
+        refresh_token: 'refresh-jwt',
+        expires_in: 3600,
+      },
+      localUser: { id: 'user-id', username: 'testuser', email: 'test@gmail.com' },
+      csrfToken: 'csrf-token-abc',
     });
     const req = {
       ip: '127.0.0.1',
@@ -76,10 +81,18 @@ describe('AuthController', () => {
     const result = await controller.login(dto, req, res);
     expect(result.success).toBe(true);
     expect(result.data).toEqual({
-      accessToken: 'access-jwt',
-      user: { id: 'user-id', email: 'test@gmail.com' },
+      id: 'user-id',
+      username: 'testuser',
+      email: 'test@gmail.com',
     });
-    expect((res.cookie as Mock).mock.calls.length).toBe(2);
+    // Three cookies: access_token, refresh_token, XSRF-TOKEN
+    expect((res.cookie as Mock).mock.calls.length).toBe(3);
+    const cookieNames = (res.cookie as Mock).mock.calls.map(
+      (c: unknown[]) => c[0],
+    );
+    expect(cookieNames).toContain('access_token');
+    expect(cookieNames).toContain('refresh_token');
+    expect(cookieNames).toContain('XSRF-TOKEN');
   });
 
   it('should handle login error', async () => {
@@ -192,13 +205,14 @@ describe('AuthController', () => {
 
       await controller.logout(req, res);
 
-      // clearCookie must be called at least once for refresh_token and XSRF-TOKEN
+      // clearCookie must be called for access_token, refresh_token, and XSRF-TOKEN
       expect(
         (res.clearCookie as Mock).mock.calls.length,
-      ).toBeGreaterThanOrEqual(2);
+      ).toBeGreaterThanOrEqual(3);
       const clearedNames = (res.clearCookie as Mock).mock.calls.map(
         (c: unknown[]) => c[0],
       );
+      expect(clearedNames).toContain('access_token');
       expect(clearedNames).toContain('refresh_token');
       expect(clearedNames).toContain('XSRF-TOKEN');
     });

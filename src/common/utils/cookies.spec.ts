@@ -3,6 +3,7 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   clearAuthCookies,
+  ACCESS_TOKEN_COOKIE,
   REFRESH_TOKEN_COOKIE,
   XSRF_TOKEN_COOKIE,
 } from './cookies';
@@ -25,7 +26,7 @@ describe('clearAuthCookies', () => {
     process.env.NODE_ENV = 'development';
   });
 
-  it('calls clearCookie for both refresh_token and XSRF-TOKEN', () => {
+  it('calls clearCookie for access_token, refresh_token, and XSRF-TOKEN', () => {
     const res = buildMockRes();
 
     clearAuthCookies(res);
@@ -34,6 +35,7 @@ describe('clearAuthCookies', () => {
       res.clearCookie as ReturnType<typeof vi.fn>
     ).mock.calls.map((c: unknown[]) => c[0]);
 
+    expect(clearedNames).toContain(ACCESS_TOKEN_COOKIE);
     expect(clearedNames).toContain(REFRESH_TOKEN_COOKIE);
     expect(clearedNames).toContain(XSRF_TOKEN_COOKIE);
   });
@@ -66,7 +68,7 @@ describe('clearAuthCookies', () => {
     expect(options.httpOnly).toBe(false);
   });
 
-  it('uses restricted path for refresh cookie and root path for XSRF cookie', () => {
+  it('uses restricted path for refresh cookie and root path for access_token and XSRF cookie', () => {
     const res = buildMockRes();
 
     clearAuthCookies(res);
@@ -76,9 +78,11 @@ describe('clearAuthCookies', () => {
       Record<string, unknown>,
     ][];
 
+    const accessTokenCall = calls.find(([name]) => name === ACCESS_TOKEN_COOKIE);
     const refreshCall = calls.find(([name]) => name === REFRESH_TOKEN_COOKIE);
     const xsrfCall = calls.find(([name]) => name === XSRF_TOKEN_COOKIE);
-    expect(refreshCall?.[1].path).toBe('/api/v1/auth');
+    expect(accessTokenCall?.[1].path).toBe('/');
+    expect(refreshCall?.[1].path).toBe('/api/v1/auth/refresh');
     expect(xsrfCall?.[1].path).toBe('/');
   });
 

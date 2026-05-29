@@ -185,13 +185,21 @@ describe('AuthService.register', () => {
 });
 
 describe('AuthService.login', () => {
-  it('calls Supabase signInWithPassword and returns session data', async () => {
+  it('calls Supabase signInWithPassword and returns session with localUser', async () => {
     const dto = { email: 'user@example.com', password: 'secret123' };
-    const sessionData = { session: { access_token: 'jwt-token' }, user: {} };
+    const sessionData = {
+      session: { access_token: 'jwt-token', refresh_token: 'refresh-token' },
+      user: { id: 'supabase-id-1' },
+    };
 
     mockSignInWithPassword.mockResolvedValue({
       data: sessionData,
       error: null,
+    });
+    mockUsersRepository.findBySupabaseId.mockResolvedValue({
+      id: 'local-uuid-1',
+      username: 'testuser',
+      email: dto.email,
     });
 
     const service = buildService();
@@ -203,9 +211,11 @@ describe('AuthService.login', () => {
     });
     expect(result).toEqual({
       session: sessionData.session,
-      user: sessionData.user,
+      localUser: { id: 'local-uuid-1', username: 'testuser', email: dto.email },
       csrfToken: expect.any(String) as unknown,
     });
+    // localUser must NOT expose passwordHash
+    expect(result.localUser).not.toHaveProperty('passwordHash');
   });
 
   it('persists hashed refresh token on successful login when local user exists', async () => {
@@ -221,6 +231,8 @@ describe('AuthService.login', () => {
     });
     mockUsersRepository.findBySupabaseId.mockResolvedValue({
       id: 'local-user-1',
+      username: 'testuser',
+      email: dto.email,
     });
 
     const service = buildService();
@@ -235,11 +247,31 @@ describe('AuthService.login', () => {
     expect(arg.tokenHash).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it('throws when Supabase returns an error', async () => {
+  it('returns null localUser when Supabase user is not found in local DB', async () => {
+    const dto = { email: 'user@example.com', password: 'secret123' };
+    const sessionData = {
+      session: { access_token: 'jwt-token', refresh_token: 'refresh-token' },
+      user: { id: 'supabase-id-1' },
+    };
+
+    mockSignInWithPassword.mockResolvedValue({
+      data: sessionData,
+      error: null,
+    });
+    mockUsersRepository.findBySupabaseId.mockResolvedValue(null);
+
+    const service = buildService();
+    const result = await service.login(dto);
+
+    expect(result.localUser).toBeNull();
+    expect(mockAuthRepository.createRefreshToken).not.toHaveBeenCalled();
+  });
+
+  it('throws UnauthorizedException (401) when Supabase returns an error', async () => {
     const dto = { email: 'user@example.com', password: 'wrong' };
     mockSignInWithPassword.mockResolvedValue({
       data: null,
-      error: { message: 'Invalid credentials' },
+      error: { message: 'Invalid login credentials' },
     });
 
     const service = buildService();
