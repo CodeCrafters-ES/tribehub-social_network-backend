@@ -432,4 +432,85 @@ describe('AuthService.refreshSession', () => {
       service.refreshSession({ rawRefreshToken: 'valid-raw-refresh' }),
     ).rejects.toThrow('Unauthorized');
   });
+
+  it('revokes all user tokens and throws Unauthorized when token is already revoked', async () => {
+    mockAuthRepository.findRefreshTokenByHash.mockResolvedValue({
+      id: 'token-id-1',
+      userId: 'user-id-1',
+      tokenHash: 'hash-1',
+      revokedAt: new Date(Date.now() - 1000),
+      revocationReason: 'logout',
+      replacedByTokenId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      expiresAt: new Date(Date.now() + 60_000),
+      ipAddress: null,
+      userAgent: null,
+    });
+
+    const service = buildService();
+    await expect(
+      service.refreshSession({ rawRefreshToken: 'revoked-token' }),
+    ).rejects.toThrow('Unauthorized');
+
+    expect(mockAuthRepository.revokeAllActiveUserTokens).toHaveBeenCalledOnce();
+    expect(mockAuthRepository.revokeAllActiveUserTokens).toHaveBeenCalledWith(
+      'user-id-1',
+      'reuse_detected',
+    );
+  });
+
+  it('revokes all user tokens and throws Unauthorized when token is expired', async () => {
+    mockAuthRepository.findRefreshTokenByHash.mockResolvedValue({
+      id: 'token-id-1',
+      userId: 'user-id-1',
+      tokenHash: 'hash-1',
+      revokedAt: null,
+      revocationReason: null,
+      replacedByTokenId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      expiresAt: new Date(Date.now() - 1000),
+      ipAddress: null,
+      userAgent: null,
+    });
+
+    const service = buildService();
+    await expect(
+      service.refreshSession({ rawRefreshToken: 'expired-token' }),
+    ).rejects.toThrow('Unauthorized');
+
+    expect(mockAuthRepository.revokeAllActiveUserTokens).toHaveBeenCalledOnce();
+    expect(mockAuthRepository.revokeAllActiveUserTokens).toHaveBeenCalledWith(
+      'user-id-1',
+      'reuse_detected',
+    );
+  });
+
+  it('throws Unauthorized when Supabase refreshSession returns an error', async () => {
+    mockAuthRepository.findRefreshTokenByHash.mockResolvedValue({
+      id: 'token-id-1',
+      userId: 'user-id-1',
+      tokenHash: 'hash-1',
+      revokedAt: null,
+      revocationReason: null,
+      replacedByTokenId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      expiresAt: new Date(Date.now() + 60_000),
+      ipAddress: null,
+      userAgent: null,
+    });
+    mockRefreshSession.mockResolvedValue({
+      data: { session: null },
+      error: { message: 'Supabase session expired' },
+    });
+
+    const service = buildService();
+    await expect(
+      service.refreshSession({ rawRefreshToken: 'valid-raw-refresh' }),
+    ).rejects.toThrow('Unauthorized');
+
+    expect(mockAuthRepository.rotateRefreshToken).not.toHaveBeenCalled();
+  });
 });

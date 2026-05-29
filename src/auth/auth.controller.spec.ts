@@ -125,6 +125,23 @@ describe('AuthController', () => {
       });
       expect((res.cookie as Mock).mock.calls.length).toBe(2);
     });
+
+    it('throws UnauthorizedException (401) when refresh_token cookie is absent', async () => {
+      const req = {
+        cookies: {},
+        ip: '127.0.0.1',
+        headers: { 'user-agent': 'vitest' },
+      } as unknown as import('express').Request;
+      const res = {
+        cookie: vi.fn(),
+        clearCookie: vi.fn(),
+      } as unknown as import('express').Response;
+
+      await expect(controller.refresh(req, res)).rejects.toThrow(
+        'Unauthorized',
+      );
+      expect(service.refreshSession).not.toHaveBeenCalled();
+    });
   });
 
   describe('logout', () => {
