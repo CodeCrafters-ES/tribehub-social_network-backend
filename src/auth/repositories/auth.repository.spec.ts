@@ -1,15 +1,24 @@
 // src/auth/repositories/auth.repository.spec.ts
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { AuthRepository, type RefreshTokenRecord } from './auth.repository';
+import {
+  AuthRepository,
+  RefreshTokenRotationConflictError,
+  type RefreshTokenRecord,
+} from './auth.repository';
 
 const mockPrismaRefreshToken = {
   findFirst: vi.fn(),
+  findUnique: vi.fn(),
+  create: vi.fn(),
   updateMany: vi.fn(),
 };
 
 const mockPrismaService = {
   refreshToken: mockPrismaRefreshToken,
+  $transaction: vi.fn((cb: (tx: typeof mockPrismaService) => unknown) =>
+    cb(mockPrismaService),
+  ),
 };
 
 describe('AuthRepository', () => {
@@ -56,7 +65,11 @@ describe('AuthRepository', () => {
         revokedAt: null,
         expiresAt: new Date(Date.now() + 3600_000),
         createdAt: new Date(),
+        updatedAt: new Date(),
         revocationReason: null,
+        replacedByTokenId: null,
+        ipAddress: null,
+        userAgent: null,
       };
       mockPrismaRefreshToken.findFirst.mockResolvedValue(tokenRecord);
 
@@ -120,6 +133,54 @@ describe('AuthRepository', () => {
       await expect(
         repository.revokeRefreshToken('nonexistent-hash'),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('findRefreshTokenByHash', () => {
+    it('queries prisma.findUnique by token hash', async () => {
+      mockPrismaRefreshToken.findUnique.mockResolvedValue(null);
+      await repository.findRefreshTokenByHash('hash-x');
+      expect(mockPrismaRefreshToken.findUnique).toHaveBeenCalledWith({
+        where: { tokenHash: 'hash-x' },
+      });
+    });
+  });
+
+  describe('createRefreshToken', () => {
+    it('creates a token with hash and expiration', async () => {
+      mockPrismaRefreshToken.create.mockResolvedValue({ id: 'token-1' });
+      const expiresAt = new Date(Date.now() + 60_000);
+      await repository.createRefreshToken({
+        userId: 'user-1',
+        tokenHash: 'hash-1',
+        expiresAt,
+      });
+      expect(mockPrismaRefreshToken.create).toHaveBeenCalledWith({
+        data: {
+          userId: 'user-1',
+          tokenHash: 'hash-1',
+          expiresAt,
+          ipAddress: undefined,
+          userAgent: undefined,
+        },
+      });
+    });
+  });
+
+  describe('rotateRefreshToken', () => {
+    it('throws when the old token was already revoked by a concurrent request', async () => {
+      mockPrismaRefreshToken.create.mockResolvedValue({ id: 'new-token-id' });
+      mockPrismaRefreshToken.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        repository.rotateRefreshToken({
+          currentTokenId: 'old-token-id',
+          currentTokenHash: 'old-hash',
+          newTokenHash: 'new-hash',
+          userId: 'user-1',
+          newExpiresAt: new Date(Date.now() + 60_000),
+        }),
+      ).rejects.toBeInstanceOf(RefreshTokenRotationConflictError);
     });
   });
 });

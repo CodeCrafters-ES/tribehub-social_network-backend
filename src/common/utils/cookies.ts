@@ -5,7 +5,7 @@
 // clearing them from the server is predictable regardless of the exact path
 // from which the request was issued.
 
-import type { Response } from 'express';
+import type { CookieOptions, Response } from 'express';
 
 /** Name of the httpOnly refresh-token cookie. */
 export const REFRESH_TOKEN_COOKIE = 'refresh_token';
@@ -15,6 +15,37 @@ export const XSRF_TOKEN_COOKIE = 'XSRF-TOKEN';
 
 /** Shared cookie path. */
 const COOKIE_PATH = '/';
+const REFRESH_COOKIE_PATH = '/api/v1/auth';
+
+export function buildRefreshTokenCookieOptions(expiresAt: Date): CookieOptions {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const cookieDomain = isProduction ? '.tribehub.io' : undefined;
+
+  return {
+    httpOnly: true,
+    secure: !isDevelopment,
+    sameSite: 'lax',
+    domain: cookieDomain,
+    path: REFRESH_COOKIE_PATH,
+    expires: expiresAt,
+  };
+}
+
+export function buildCsrfCookieOptions(expiresAt: Date): CookieOptions {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const cookieDomain = isProduction ? '.tribehub.io' : undefined;
+
+  return {
+    httpOnly: false,
+    secure: !isDevelopment,
+    sameSite: 'lax',
+    domain: cookieDomain,
+    path: COOKIE_PATH,
+    expires: expiresAt,
+  };
+}
 
 /**
  * Clears both the `refresh_token` and `XSRF-TOKEN` cookies from the response.
@@ -26,23 +57,15 @@ const COOKIE_PATH = '/';
  * flag are applied regardless of when the module was first loaded.
  */
 export function clearAuthCookies(res: Response): void {
-  const isProduction = process.env.NODE_ENV === 'production';
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  const cookieDomain = isProduction ? '.tribehub.io' : undefined;
-
   res.clearCookie(REFRESH_TOKEN_COOKIE, {
-    httpOnly: true,
-    secure: !isDevelopment,
-    sameSite: 'strict',
-    domain: cookieDomain,
-    path: COOKIE_PATH,
+    ...buildRefreshTokenCookieOptions(new Date(0)),
+    expires: undefined,
+    maxAge: 0,
   });
 
   res.clearCookie(XSRF_TOKEN_COOKIE, {
-    httpOnly: false, // XSRF-TOKEN must be readable by JavaScript
-    secure: !isDevelopment,
-    sameSite: 'strict',
-    domain: cookieDomain,
-    path: COOKIE_PATH,
+    ...buildCsrfCookieOptions(new Date(0)),
+    expires: undefined,
+    maxAge: 0,
   });
 }

@@ -44,7 +44,12 @@ export class SentryExceptionFilter implements ExceptionFilter {
 
     if (isHttpException) {
       const responseBody = exception.getResponse();
-      response.status(status).json(responseBody);
+      // Normalize response to always include statusCode
+      const body =
+        typeof responseBody === 'object' && responseBody !== null
+          ? { statusCode: status, ...responseBody }
+          : { statusCode: status, message: responseBody };
+      response.status(status).json(body);
     } else if (
       typeof exception === 'object' &&
       exception !== null &&
