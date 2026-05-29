@@ -25,10 +25,13 @@ import { AuthService } from './auth.service';
 import { RegisterRequestDto } from './dto/register.request.dto';
 import { RegisterResponseDto } from './dto/register.response.dto';
 import { LoginDto } from './dto/login.dto';
+import { LoginResponseDto } from './dto/login.response.dto';
 import {
   clearAuthCookies,
+  ACCESS_TOKEN_COOKIE,
   REFRESH_TOKEN_COOKIE,
   XSRF_TOKEN_COOKIE,
+  buildAccessTokenCookieOptions,
   buildRefreshTokenCookieOptions,
   buildCsrfCookieOptions,
 } from '../common/utils/cookies';
@@ -78,58 +81,80 @@ export class AuthController {
   }
 
   @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Authenticate with email and password' })
+  @ApiResponse({
+    status: 200,
+    description: 'Login successful — tokens set as httpOnly cookies',
+    type: LoginResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error — missing or malformed fields',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized — invalid credentials',
+  })
   async login(
     @Body() dto: LoginDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ) {
-    try {
-      const result = await this.authService.login(dto, {
-        ipAddress: req.ip,
-        userAgent:
-          typeof req.headers['user-agent'] === 'string'
-            ? req.headers['user-agent']
-            : undefined,
-      });
-      const refreshToken = result.session?.refresh_token;
-      const accessToken = result.session?.access_token;
+  ): Promise<LoginResponseDto> {
+    const result = await this.authService.login(dto, {
+      ipAddress: req.ip,
+      userAgent:
+        typeof req.headers['user-agent'] === 'string'
+          ? req.headers['user-agent']
+          : undefined,
+    });
 
-      if (!refreshToken || !accessToken) {
-        throw new BadRequestException({
-          code: 'LOGIN_ERROR',
-          message: 'Invalid authentication response',
-        });
-      }
+    const refreshToken = result.session?.refresh_token;
+    const accessToken = result.session?.access_token;
 
-      const refreshExpiresAt = new Date(Date.now() + this.refreshTtlMs);
-      const { csrfToken } = result;
-
-      res.cookie(
-        REFRESH_TOKEN_COOKIE,
-        refreshToken,
-        buildRefreshTokenCookieOptions(refreshExpiresAt),
-      );
-      res.cookie(
-        XSRF_TOKEN_COOKIE,
-        csrfToken,
-        buildCsrfCookieOptions(refreshExpiresAt),
-      );
-
-      return {
-        success: true,
-        data: {
-          accessToken,
-          user: result.user ?? null,
-        },
-        message: 'Login successful',
-      };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      throw new BadRequestException({
-        message,
-        code: 'LOGIN_ERROR',
-      });
+    if (!refreshToken || !accessToken) {
+      throw new UnauthorizedException('Invalid authentication response');
     }
+
+    const refreshExpiresAt = new Date(Date.now() + this.refreshTtlMs);
+    // Supabase access tokens expire in `expires_in` seconds (default 3600).
+    // Fall back to 3600 s if the field is absent.
+    const accessTokenTtlMs =
+      ((result.session as { expires_in?: number } | null)?.expires_in ?? 3600) *
+      1000;
+    const accessTokenExpiresAt = new Date(Date.now() + accessTokenTtlMs);
+    const { csrfToken } = result;
+
+    res.cookie(
+      ACCESS_TOKEN_COOKIE,
+      accessToken,
+      buildAccessTokenCookieOptions(accessTokenExpiresAt),
+    );
+    res.cookie(
+      REFRESH_TOKEN_COOKIE,
+      refreshToken,
+      buildRefreshTokenCookieOptions(refreshExpiresAt),
+    );
+    res.cookie(
+      XSRF_TOKEN_COOKIE,
+      csrfToken,
+      buildCsrfCookieOptions(refreshExpiresAt),
+    );
+
+    const user = result.localUser;
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return {
+      success: true,
+      data: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+      },
+      message: 'Login successful',
+    };
   }
 
   @Post('refresh')

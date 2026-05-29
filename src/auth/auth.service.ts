@@ -129,7 +129,11 @@ export class AuthService {
   async login(
     data: LoginDto,
     metadata?: { ipAddress?: string; userAgent?: string },
-  ) {
+  ): Promise<{
+    session: { access_token: string; refresh_token: string } | null;
+    localUser: { id: string; username: string; email: string } | null;
+    csrfToken: string;
+  }> {
     const supabase = getSupabaseClient();
     const { email, password } = data;
     const { data: signInData, error } = await supabase.auth.signInWithPassword({
@@ -138,27 +142,39 @@ export class AuthService {
     });
     if (error) {
       this.securityMonitor.recordFailedLogin();
-      throw new Error(error.message);
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     const refreshToken = signInData.session?.refresh_token;
     const supabaseUserId = signInData.user?.id;
-    if (refreshToken && supabaseUserId) {
-      const user = await this.usersRepository.findBySupabaseId(supabaseUserId);
-      if (user) {
-        await this.authRepository.createRefreshToken({
-          userId: user.id,
-          tokenHash: this.hashToken(refreshToken),
-          expiresAt: new Date(Date.now() + this.refreshTtlMs),
-          ipAddress: metadata?.ipAddress,
-          userAgent: metadata?.userAgent,
-        });
+
+    let localUser: { id: string; username: string; email: string } | null =
+      null;
+
+    if (supabaseUserId) {
+      const dbUser =
+        await this.usersRepository.findBySupabaseId(supabaseUserId);
+      if (dbUser) {
+        localUser = { id: dbUser.id, username: dbUser.username, email: dbUser.email };
+
+        if (refreshToken) {
+          await this.authRepository.createRefreshToken({
+            userId: dbUser.id,
+            tokenHash: this.hashToken(refreshToken),
+            expiresAt: new Date(Date.now() + this.refreshTtlMs),
+            ipAddress: metadata?.ipAddress,
+            userAgent: metadata?.userAgent,
+          });
+        }
       }
     }
 
     return {
-      session: signInData.session,
-      user: signInData.user,
+      session: signInData.session as {
+        access_token: string;
+        refresh_token: string;
+      } | null,
+      localUser,
       csrfToken: this.generateCsrfToken(),
     };
   }
