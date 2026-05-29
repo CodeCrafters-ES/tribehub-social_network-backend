@@ -155,7 +155,11 @@ export class AuthService {
       const dbUser =
         await this.usersRepository.findBySupabaseId(supabaseUserId);
       if (dbUser) {
-        localUser = { id: dbUser.id, username: dbUser.username, email: dbUser.email };
+        localUser = {
+          id: dbUser.id,
+          username: dbUser.username,
+          email: dbUser.email,
+        };
 
         if (refreshToken) {
           await this.authRepository.createRefreshToken({

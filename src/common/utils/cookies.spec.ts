@@ -78,7 +78,9 @@ describe('clearAuthCookies', () => {
       Record<string, unknown>,
     ][];
 
-    const accessTokenCall = calls.find(([name]) => name === ACCESS_TOKEN_COOKIE);
+    const accessTokenCall = calls.find(
+      ([name]) => name === ACCESS_TOKEN_COOKIE,
+    );
     const refreshCall = calls.find(([name]) => name === REFRESH_TOKEN_COOKIE);
     const xsrfCall = calls.find(([name]) => name === XSRF_TOKEN_COOKIE);
     expect(accessTokenCall?.[1].path).toBe('/');

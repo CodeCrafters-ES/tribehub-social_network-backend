@@ -66,7 +66,11 @@ describe('AuthController', () => {
         refresh_token: 'refresh-jwt',
         expires_in: 3600,
       },
-      localUser: { id: 'user-id', username: 'testuser', email: 'test@gmail.com' },
+      localUser: {
+        id: 'user-id',
+        username: 'testuser',
+        email: 'test@gmail.com',
+      },
       csrfToken: 'csrf-token-abc',
     });
     const req = {
