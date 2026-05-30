@@ -5,6 +5,7 @@ import {
   ValidationPipe,
   ExecutionContext,
 } from '@nestjs/common';
+import type { AuthenticatedRequest } from './../src/common/types/authenticated-request.type';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import cookieParser from 'cookie-parser';
@@ -27,7 +28,10 @@ function applyGlobalSetup(app: INestApplication): void {
 
 describe('Account Deletion (e2e)', () => {
   let app: INestApplication<App>;
-  let mockAccountService: any;
+  let mockAccountService: {
+    createDeleteRequest: ReturnType<typeof vi.fn>;
+    confirmDeleteRequest: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     mockAccountService = {
@@ -39,7 +43,7 @@ describe('Account Deletion (e2e)', () => {
       .overrideGuard(SupabaseAuthGuard)
       .useValue({
         canActivate: (context: ExecutionContext) => {
-          const req = context.switchToHttp().getRequest();
+          const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
           req.supabaseUser = { sub: MOCK_USER_ID };
           return true;
         },
@@ -48,7 +52,9 @@ describe('Account Deletion (e2e)', () => {
       .useValue(mockAccountService)
       .overrideProvider(PrismaService)
       .useValue({
-        $transaction: vi.fn((cb) => cb(mockAccountService)),
+        $transaction: vi.fn((cb: (tx: typeof mockAccountService) => unknown) =>
+          cb(mockAccountService),
+        ),
       })
       .compile();
 

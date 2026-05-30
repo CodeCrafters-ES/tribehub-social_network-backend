@@ -191,7 +191,10 @@ describe('UsersRepository', () => {
       await repository.softDelete('uuid-1');
 
       expect(mockPrismaUser.update).toHaveBeenCalledOnce();
-      const arg = mockPrismaUser.update.mock.calls[0][0];
+      const arg = mockPrismaUser.update.mock.calls[0][0] as {
+        where: { id: string };
+        data: { status: string; deletedAt: Date };
+      };
       expect(arg.where).toEqual({ id: 'uuid-1' });
       expect(arg.data.status).toBe('DELETED');
       expect(arg.data.deletedAt).toBeInstanceOf(Date);

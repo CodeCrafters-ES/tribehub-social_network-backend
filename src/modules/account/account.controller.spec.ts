@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BadRequestException } from '@nestjs/common';
 import { AccountController } from './account.controller';
-import type { AuthenticatedRequest } from '../../auth/guards/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../../common/types/authenticated-request.type';
 
 describe('AccountController', () => {
   let controller: AccountController;

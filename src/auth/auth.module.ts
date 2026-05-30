@@ -13,7 +13,13 @@ import { ObservabilityModule } from '../observability/observability.module';
 @Module({
   imports: [UsersModule, ObservabilityModule],
   controllers: [AuthController],
-  providers: [AuthService, AuthRepository, SupabaseAuthGuard, CsrfGuard, PasswordHashService],
-    exports: [SupabaseAuthGuard, PasswordHashService],
+  providers: [
+    AuthService,
+    AuthRepository,
+    SupabaseAuthGuard,
+    CsrfGuard,
+    PasswordHashService,
+  ],
+  exports: [SupabaseAuthGuard, PasswordHashService],
 })
 export class AuthModule {}
