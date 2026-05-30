@@ -32,7 +32,7 @@ describe('AccountController', () => {
         expiresIn: 900,
       });
 
-      const result = await controller.requestDelete(reqWith(USER_ID));
+      const result = await controller.requestDelete(reqWith(USER_ID), {});
 
       expect(result).toMatchObject({ deleteRequestId: REQUEST_ID });
       expect(accountService.createDeleteRequest).toHaveBeenCalledWith(USER_ID);
@@ -40,7 +40,7 @@ describe('AccountController', () => {
 
     it('rejects a non-UUID user identifier', async () => {
       await expect(
-        controller.requestDelete(reqWith('not-a-uuid')),
+        controller.requestDelete(reqWith('not-a-uuid'), {}),
       ).rejects.toThrow(BadRequestException);
     });
   });
