@@ -49,10 +49,16 @@ export class AccountRepository {
   }
 
   /**
-   * Atomically consumes the request (only if it is still active) and
-   * soft-deletes the user. The `updateMany ... where usedAt: null` guard makes
-   * the consume step idempotent and safe against concurrent double-submits
-   * (TOCTOU): if another request already consumed it, count === 0 and we abort.
+   * Atomically consumes the request (only if it is still active),
+   * revokes all active refresh tokens for the user, and soft-deletes the user.
+   *
+   * The `updateMany ... where usedAt: null` guard makes the consume step
+   * idempotent and safe against concurrent double-submits (TOCTOU): if another
+   * request already consumed it, count === 0 and we abort.
+   *
+   * Refresh token revocation is performed inside the same transaction to ensure
+   * that sessions are invalidated atomically with the account deletion — no
+   * window exists where the account is deleted but tokens remain valid.
    */
   async consumeRequestAndSoftDeleteUser(
     requestId: string,
@@ -69,6 +75,13 @@ export class AccountRepository {
           'This request has already been processed or invalidated',
         );
       }
+
+      // Revoke all active refresh tokens for the user so that any in-flight
+      // sessions are invalidated immediately upon account deletion.
+      await tx.refreshToken.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date(), revocationReason: 'account_deleted' },
+      });
 
       await this.usersRepository.softDelete(userId, tx);
     });
