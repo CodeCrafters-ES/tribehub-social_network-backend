@@ -1,4 +1,5 @@
-import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsString, IsUUID, MinLength } from 'class-validator';
+
 export class DeleteAccountConfirmDto {
   @IsNotEmpty()
   @IsUUID()
@@ -6,5 +7,6 @@ export class DeleteAccountConfirmDto {
 
   @IsNotEmpty()
   @IsString()
+  @MinLength(8)
   password!: string;
 }

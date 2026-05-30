@@ -8,32 +8,36 @@ import {
   Req,
   BadRequestException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import { isUUID } from 'class-validator';
 import { AccountService } from './account.service';
 import { DeleteAccountConfirmDto } from './dto/delete-account-confirm.dto';
 import {
   SupabaseAuthGuard,
   AuthenticatedRequest,
 } from '../../auth/guards/supabase-auth.guard';
-import { Throttle } from '@nestjs/throttler';
-import { isUUID } from 'class-validator';
+import { UserThrottlerGuard } from '../../common/guards/user-throttler.guard';
+
 @Controller('account')
 export class AccountController {
   constructor(private readonly accountService: AccountService) {}
 
-  @UseGuards(SupabaseAuthGuard)
+  // UserThrottlerGuard runs after SupabaseAuthGuard so it can key the rate
+  // limit by the authenticated user id (resistant to IP rotation).
+  @UseGuards(SupabaseAuthGuard, UserThrottlerGuard)
   @Throttle({ default: { limit: 5, ttl: 900000 } })
   @Post('delete/request')
   @HttpCode(HttpStatus.OK)
   async requestDelete(@Req() req: AuthenticatedRequest) {
     const userId = req.supabaseUser.sub;
 
-    if (!isUUID(userId)) {
+    if (!userId || !isUUID(userId)) {
       throw new BadRequestException('Invalid user identifier');
     }
-    return await this.accountService.createDeleteRequest(userId);
+    return this.accountService.createDeleteRequest(userId);
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, UserThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 900000 } })
   @Post('delete/confirm')
   @HttpCode(HttpStatus.OK)
@@ -42,9 +46,10 @@ export class AccountController {
     @Body() body: DeleteAccountConfirmDto,
   ) {
     const userId = req.supabaseUser.sub;
-    if (!isUUID(userId)) {
+
+    if (!userId || !isUUID(userId)) {
       throw new BadRequestException('Invalid user identifier');
     }
-    return await this.accountService.confirmDeleteRequest(body, userId);
+    return this.accountService.confirmDeleteRequest(body, userId);
   }
 }
