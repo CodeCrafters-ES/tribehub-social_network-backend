@@ -34,44 +34,45 @@ generator client {
 // =============================================================================
 
 model User {
-  id            String     @id @default(uuid())
-  supabaseId    String?    @unique // UUID del usuario en Supabase Auth (nullable para flexibilidad)
-  email         String     @unique
-  username      String     @unique
-  passwordHash  String?    // Hash Argon2 de la contraseña (nunca texto plano)
-  status        UserStatus @default(ACTIVE)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  deletedAt     DateTime?  // null = activo; valor = soft deleted
+  id           String     @id @default(uuid())
+  supabaseId   String?    @unique // UUID del usuario en Supabase Auth (nullable para flexibilidad)
+  email        String     @unique
+  username     String     @unique
+  passwordHash String? // Hash Argon2 de la contraseña (nunca texto plano)
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  deletedAt    DateTime? // null = activo; valor = soft deleted
 
   // Relaciones
-  profile       Profile?
-  interests     UserInterest[]
-  posts         Post[]
-  comments      Comment[]
-  reactions     Reaction[]
-  refreshTokens RefreshToken[]
+  profile        Profile?
+  interests      UserInterest[]
+  posts          Post[]
+  comments       Comment[]
+  reactions      Reaction[]
+  refreshTokens  RefreshToken[]
+  deleteRequests DeleteAccountRequest[]
 
   @@map("users")
 }
 
 model RefreshToken {
-  id               String    @id @default(uuid())
-  userId           String
-  tokenHash        String    @unique // SHA-256 hash del refresh token (nunca texto plano)
-  revokedAt        DateTime? // null = activo; valor = revocado
-  revocationReason String?   // 'logout' | 'rotation' | 'admin'
+  id                String    @id @default(uuid())
+  userId            String
+  tokenHash         String    @unique // SHA-256 hash del refresh token (nunca texto plano)
+  revokedAt         DateTime? // null = activo; valor = revocado
+  revocationReason  String? // 'logout' | 'rotation' | 'admin'
   replacedByTokenId String?
-  updatedAt        DateTime  @updatedAt
-  createdAt        DateTime  @default(now())
-  expiresAt        DateTime  // Fecha de expiración del token
-  ipAddress        String?
-  userAgent        String?
+  updatedAt         DateTime  @updatedAt
+  createdAt         DateTime  @default(now())
+  expiresAt         DateTime // Fecha de expiración del token
+  ipAddress         String?
+  userAgent         String?
 
   // Relaciones
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  replacedByToken  RefreshToken? @relation("RefreshTokenRotation", fields: [replacedByTokenId], references: [id])
-  previousTokens   RefreshToken[] @relation("RefreshTokenRotation")
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replacedByToken RefreshToken?  @relation("RefreshTokenRotation", fields: [replacedByTokenId], references: [id])
+  previousTokens  RefreshToken[] @relation("RefreshTokenRotation")
 
   @@index([userId])
   @@index([replacedByTokenId])
@@ -79,8 +80,8 @@ model RefreshToken {
 }
 
 model Profile {
-  id          String    @id @default(uuid())
-  userId      String    @unique
+  id          String   @id @default(uuid())
+  userId      String   @unique
   displayName String
   bio         String?
   avatarUrl   String?
@@ -90,7 +91,7 @@ model Profile {
   deletedAt   DateTime? // null = activo; valor = soft deleted
 
   // Relaciones
-  user        User      @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
   @@map("profiles")
 }
@@ -104,7 +105,7 @@ model Interest {
   createdAt DateTime       @default(now())
 
   // Relaciones
-  users     UserInterest[]
+  users UserInterest[]
 
   @@index([status])
   @@map("interests")
@@ -116,8 +117,8 @@ model UserInterest {
   createdAt  DateTime @default(now())
 
   // Relaciones
-  user       User     @relation(fields: [userId], references: [id])
-  interest   Interest @relation(fields: [interestId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+  interest Interest @relation(fields: [interestId], references: [id])
 
   @@id([userId, interestId]) // Clave primaria compuesta: evita duplicados
   @@map("user_interests")
@@ -127,7 +128,7 @@ model Post {
   id        String    @id @default(uuid())
   authorId  String
   content   String
-  imageUrl  String?   // null si es post de solo texto
+  imageUrl  String? // null si es post de solo texto
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime? // soft delete
@@ -142,16 +143,16 @@ model Post {
 }
 
 model Asset {
-  id          String      @id @default(uuid())
-  postId      String?     // null hasta que se complete el flujo de dos pasos
-  uploadUrl   String      // URL presignada temporal (expira)
-  storageUrl  String?     // URL final en el storage (se completa en el paso 2)
-  status      AssetStatus @default(PENDING)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id         String      @id @default(uuid())
+  postId     String? // null hasta que se complete el flujo de dos pasos
+  uploadUrl  String // URL presignada temporal (expira)
+  storageUrl String? // URL final en el storage (se completa en el paso 2)
+  status     AssetStatus @default(PENDING)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 
   // Relaciones
-  post        Post?       @relation(fields: [postId], references: [id])
+  post Post? @relation(fields: [postId], references: [id])
 
   @@map("assets")
 }
@@ -166,8 +167,8 @@ model Comment {
   deletedAt DateTime? // soft delete
 
   // Relaciones
-  post      Post      @relation(fields: [postId], references: [id])
-  author    User      @relation(fields: [authorId], references: [id])
+  post   Post @relation(fields: [postId], references: [id])
+  author User @relation(fields: [authorId], references: [id])
 
   @@map("comments")
 }
@@ -180,8 +181,8 @@ model Reaction {
   createdAt DateTime     @default(now())
 
   // Relaciones
-  post      Post         @relation(fields: [postId], references: [id])
-  user      User         @relation(fields: [userId], references: [id])
+  post Post @relation(fields: [postId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
   // Un usuario solo puede tener UNA reacción por post (No-Op en duplicados)
   @@unique([postId, userId])
@@ -205,8 +206,8 @@ model Reaction {
 model SystemConfig {
   id        String   @id @default(uuid())
   key       String   @unique // Unique flag name — e.g. "feature.feed.enabled"
-  value     Json     // Native JSON column; use valueType to know how to cast
-  valueType String?  // Optional hint: "boolean" | "string" | "number" | "json"
+  value     Json // Native JSON column; use valueType to know how to cast
+  valueType String? // Optional hint: "boolean" | "string" | "number" | "json"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -225,9 +226,9 @@ enum UserStatus {
 }
 
 enum AssetStatus {
-  PENDING   // Presigned URL generada, cliente aún no ha subido
-  UPLOADED  // Cliente completó la subida
-  ATTACHED  // Asset vinculado a un post/perfil
+  PENDING // Presigned URL generada, cliente aún no ha subido
+  UPLOADED // Cliente completó la subida
+  ATTACHED // Asset vinculado a un post/perfil
 }
 
 enum ReactionType {
@@ -243,4 +244,18 @@ enum InterestStatus {
   VALIDATED
   PENDING
   INACTIVE
+}
+
+model DeleteAccountRequest {
+  id        String    @id @default(uuid())
+  userId    String
+  usedAt    DateTime? // null = no usado; fecha = ya se usó para borrar
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+
+  // Relaciones
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("delete_account_requests")
 }

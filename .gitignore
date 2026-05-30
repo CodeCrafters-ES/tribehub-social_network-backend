@@ -67,4 +67,3 @@ openspec/*
 # Si luego se quiere añadir:
 # git add .github/workflows/claude.yml
 # git commit -m "chore: add Claude Code GitHub Actions workflow"
-openspec/*
