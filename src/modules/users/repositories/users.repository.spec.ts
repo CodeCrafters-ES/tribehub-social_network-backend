@@ -6,6 +6,7 @@ import { UsersRepository } from './users.repository';
 const mockPrismaUser = {
   create: vi.fn(),
   findFirst: vi.fn(),
+  update: vi.fn(),
 };
 
 const mockPrismaService = {
@@ -180,6 +181,30 @@ describe('UsersRepository', () => {
       const result = await repository.findBySupabaseId('unknown-supabase-id');
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('softDelete', () => {
+    it('stamps deletedAt and flips status to DELETED', async () => {
+      mockPrismaUser.update.mockResolvedValue({ id: 'uuid-1' });
+
+      await repository.softDelete('uuid-1');
+
+      expect(mockPrismaUser.update).toHaveBeenCalledOnce();
+      const arg = mockPrismaUser.update.mock.calls[0][0];
+      expect(arg.where).toEqual({ id: 'uuid-1' });
+      expect(arg.data.status).toBe('DELETED');
+      expect(arg.data.deletedAt).toBeInstanceOf(Date);
+    });
+
+    it('uses the provided transaction client when given', async () => {
+      const txUpdate = vi.fn().mockResolvedValue({ id: 'uuid-2' });
+      const tx = { user: { update: txUpdate } };
+
+      await repository.softDelete('uuid-2', tx as never);
+
+      expect(txUpdate).toHaveBeenCalledOnce();
+      expect(mockPrismaUser.update).not.toHaveBeenCalled();
     });
   });
 });
