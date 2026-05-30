@@ -7,6 +7,7 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
 import { createHash, randomBytes } from 'crypto';
 
@@ -27,14 +28,21 @@ import { SecurityMonitorService } from '../observability/alerts/security-monitor
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private readonly refreshTtlMs =
-    Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? '7') * 24 * 60 * 60 * 1000;
+  private readonly refreshTtlMs: number;
 
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly authRepository: AuthRepository,
     private readonly securityMonitor: SecurityMonitorService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.refreshTtlMs =
+      Number(this.configService.get('REFRESH_TOKEN_TTL_DAYS') ?? '7') *
+      24 *
+      60 *
+      60 *
+      1000;
+  }
 
   async register(data: RegisterRequestDto) {
     const { email, password, username } = data;
@@ -133,6 +141,7 @@ export class AuthService {
     session: { access_token: string; refresh_token: string } | null;
     localUser: { id: string; username: string; email: string } | null;
     csrfToken: string;
+    refreshExpiresAt: Date;
   }> {
     const supabase = getSupabaseClient();
     const { email, password } = data;
@@ -147,6 +156,7 @@ export class AuthService {
 
     const refreshToken = signInData.session?.refresh_token;
     const supabaseUserId = signInData.user?.id;
+    const refreshExpiresAt = new Date(Date.now() + this.refreshTtlMs);
 
     let localUser: { id: string; username: string; email: string } | null =
       null;
@@ -165,7 +175,7 @@ export class AuthService {
           await this.authRepository.createRefreshToken({
             userId: dbUser.id,
             tokenHash: this.hashToken(refreshToken),
-            expiresAt: new Date(Date.now() + this.refreshTtlMs),
+            expiresAt: refreshExpiresAt,
             ipAddress: metadata?.ipAddress,
             userAgent: metadata?.userAgent,
           });
@@ -180,6 +190,7 @@ export class AuthService {
       } | null,
       localUser,
       csrfToken: this.generateCsrfToken(),
+      refreshExpiresAt,
     };
   }
 

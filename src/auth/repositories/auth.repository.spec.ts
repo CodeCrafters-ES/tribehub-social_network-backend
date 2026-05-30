@@ -168,6 +168,47 @@ describe('AuthRepository', () => {
   });
 
   describe('rotateRefreshToken', () => {
+    it('creates the new token and revokes the old one with replacedByTokenId', async () => {
+      const newTokenRecord: RefreshTokenRecord = {
+        id: 'new-token-id',
+        userId: 'user-1',
+        tokenHash: 'new-hash',
+        revokedAt: null,
+        revocationReason: null,
+        replacedByTokenId: null,
+        expiresAt: new Date(Date.now() + 60_000),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        ipAddress: null,
+        userAgent: null,
+      };
+      mockPrismaRefreshToken.create.mockResolvedValue(newTokenRecord);
+      mockPrismaRefreshToken.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await repository.rotateRefreshToken({
+        currentTokenId: 'old-token-id',
+        currentTokenHash: 'old-hash',
+        newTokenHash: 'new-hash',
+        userId: 'user-1',
+        newExpiresAt: new Date(Date.now() + 60_000),
+      });
+
+      expect(result).toEqual(newTokenRecord);
+
+      expect(mockPrismaRefreshToken.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'old-token-id',
+          tokenHash: 'old-hash',
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: expect.any(Date) as unknown,
+          revocationReason: 'rotation',
+          replacedByTokenId: 'new-token-id',
+        },
+      });
+    });
+
     it('throws when the old token was already revoked by a concurrent request', async () => {
       mockPrismaRefreshToken.create.mockResolvedValue({ id: 'new-token-id' });
       mockPrismaRefreshToken.updateMany.mockResolvedValue({ count: 0 });
@@ -181,6 +222,41 @@ describe('AuthRepository', () => {
           newExpiresAt: new Date(Date.now() + 60_000),
         }),
       ).rejects.toBeInstanceOf(RefreshTokenRotationConflictError);
+    });
+  });
+
+  describe('revokeAllActiveUserTokens', () => {
+    it('revokes all active tokens for a userId with the provided reason', async () => {
+      mockPrismaRefreshToken.updateMany.mockResolvedValue({ count: 3 });
+
+      const before = new Date();
+      await repository.revokeAllActiveUserTokens('user-1', 'reuse_detected');
+      const after = new Date();
+
+      expect(mockPrismaRefreshToken.updateMany).toHaveBeenCalledOnce();
+
+      const arg = mockPrismaRefreshToken.updateMany.mock.calls[0][0] as {
+        where: { userId: string; revokedAt: null };
+        data: { revokedAt: Date; revocationReason: string };
+      };
+      expect(arg.where.userId).toBe('user-1');
+      expect(arg.where.revokedAt).toBeNull();
+      expect(arg.data.revocationReason).toBe('reuse_detected');
+      expect(arg.data.revokedAt.getTime()).toBeGreaterThanOrEqual(
+        before.getTime(),
+      );
+      expect(arg.data.revokedAt.getTime()).toBeLessThanOrEqual(after.getTime());
+    });
+
+    it('does not throw when no active tokens exist for the user (count: 0)', async () => {
+      mockPrismaRefreshToken.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        repository.revokeAllActiveUserTokens(
+          'user-no-tokens',
+          'reuse_detected',
+        ),
+      ).resolves.toBeUndefined();
     });
   });
 });
