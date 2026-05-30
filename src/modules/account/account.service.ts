@@ -4,103 +4,88 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { ConfigService } from '@nestjs/config';
+import { AccountRepository } from './repositories/account.repository';
+import { PasswordHashService } from '../../auth/password-hash.service';
 import { DeleteAccountConfirmDto } from './dto/delete-account-confirm.dto';
-import * as argon2 from 'argon2';
 
 @Injectable()
 export class AccountService {
-  constructor(private readonly prisma: PrismaService) {}
+  /** Default TTL for a delete-account challenge (15 minutes). */
+  private static readonly DEFAULT_EXPIRES_IN_SECONDS = 900;
+
+  constructor(
+    private readonly accountRepository: AccountRepository,
+    private readonly passwordHashService: PasswordHashService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  private getExpiresInSeconds(): number {
+    return this.configService.get<number>(
+      'ACCOUNT_DELETE_REQUEST_TTL_SECONDS',
+      AccountService.DEFAULT_EXPIRES_IN_SECONDS,
+    );
+  }
 
   async createDeleteRequest(userId: string) {
-    const EXPIRES_IN_SECONDS = 900; //15 minutes
-    const expiresAt = new Date();
-    expiresAt.setSeconds(expiresAt.getSeconds() + EXPIRES_IN_SECONDS);
+    const expiresInSeconds = this.getExpiresInSeconds();
+    const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
 
-    return await this.prisma.$transaction(async (tx) => {
-      // Invalidate prior requests to prevent token accumulation
-      await tx.deleteAccountRequest.updateMany({
-        where: {
-          userId: userId,
-          usedAt: null,
-        },
-        data: {
-          usedAt: new Date(),
-        },
-      });
+    const request = await this.accountRepository.createRequest(
+      userId,
+      expiresAt,
+    );
 
-      const newRequest = await tx.deleteAccountRequest.create({
-        data: {
-          userId: userId,
-          expiresAt: expiresAt,
-        },
-      });
-
-      return {
-        deleteRequestId: newRequest.id,
-        expiresIn: EXPIRES_IN_SECONDS,
-      };
-    });
+    return {
+      deleteRequestId: request.id,
+      expiresIn: expiresInSeconds,
+    };
   }
 
   async confirmDeleteRequest(data: DeleteAccountConfirmDto, userId: string) {
-    return await this.prisma.$transaction(async (tx) => {
-      const deleteRequest = await tx.deleteAccountRequest.findUnique({
-        where: { id: data.deleteRequestId },
-        include: { user: true },
-      });
+    const deleteRequest = await this.accountRepository.findById(
+      data.deleteRequestId,
+    );
 
-      if (!deleteRequest) {
-        throw new NotFoundException('Delete request not found');
-      }
+    // A non-existent request and a request owned by another user must be
+    // indistinguishable to avoid leaking the existence of other users'
+    // requests (enumeration oracle). Both return 404.
+    if (!deleteRequest || deleteRequest.userId !== userId) {
+      throw new NotFoundException('Delete request not found');
+    }
 
-      const now = new Date();
-
-      if (deleteRequest.userId !== userId) {
-        throw new UnauthorizedException(
-          'You do not have permission to confirm this request',
-        );
-      }
-
-      if (deleteRequest.usedAt !== null) {
-        throw new BadRequestException(
-          'This request has already been processed or invalidated',
-        );
-      }
-
-      if (deleteRequest.expiresAt < now) {
-        throw new BadRequestException(
-          'Request has expired. Please request a new one',
-        );
-      }
-
-      const user = deleteRequest.user;
-
-      if (!user || !user.passwordHash) {
-        throw new UnauthorizedException('Invalid credentials');
-      }
-
-      const isPasswordValid = await argon2.verify(
-        user.passwordHash,
-        data.password,
+    if (deleteRequest.expiresAt < new Date()) {
+      throw new BadRequestException(
+        'Request has expired. Please request a new one',
       );
+    }
 
-      if (!isPasswordValid) {
-        throw new UnauthorizedException('Invalid password');
-      }
+    if (deleteRequest.usedAt !== null) {
+      throw new BadRequestException(
+        'This request has already been processed or invalidated',
+      );
+    }
 
-      // Mark the delete request as used to prevent reuse
-      await tx.deleteAccountRequest.update({
-        where: { id: data.deleteRequestId },
-        data: { usedAt: new Date() },
-      });
+    const user = deleteRequest.user;
+    if (!user || !user.passwordHash) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
-      await tx.user.update({
-        where: { id: userId },
-        data: { deletedAt: new Date() },
-      });
+    const isPasswordValid = await this.passwordHashService.verify(
+      user.passwordHash,
+      data.password,
+    );
 
-      return { ok: true };
-    });
+    if (!isPasswordValid) {
+      // The request is intentionally NOT consumed on a wrong password.
+      throw new UnauthorizedException('Invalid password');
+    }
+
+    await this.accountRepository.consumeRequestAndSoftDeleteUser(
+      deleteRequest.id,
+      userId,
+    );
+
+    return { ok: true };
   }
 }
