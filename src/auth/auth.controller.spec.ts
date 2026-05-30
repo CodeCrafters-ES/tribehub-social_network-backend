@@ -72,6 +72,7 @@ describe('AuthController', () => {
         email: 'test@gmail.com',
       },
       csrfToken: 'csrf-token-abc',
+      refreshExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
     const req = {
       ip: '127.0.0.1',
