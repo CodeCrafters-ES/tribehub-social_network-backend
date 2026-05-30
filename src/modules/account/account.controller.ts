@@ -12,10 +12,8 @@ import { Throttle } from '@nestjs/throttler';
 import { isUUID } from 'class-validator';
 import { AccountService } from './account.service';
 import { DeleteAccountConfirmDto } from './dto/delete-account-confirm.dto';
-import {
-  SupabaseAuthGuard,
-  AuthenticatedRequest,
-} from '../../auth/guards/supabase-auth.guard';
+import { SupabaseAuthGuard } from '../../auth/guards/supabase-auth.guard';
+import { AuthenticatedRequest } from '../../common/types/authenticated-request.type';
 import { UserThrottlerGuard } from '../../common/guards/user-throttler.guard';
 
 @Controller('account')
