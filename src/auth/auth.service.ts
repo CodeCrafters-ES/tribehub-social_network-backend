@@ -101,7 +101,9 @@ export class AuthService {
         try {
           const supabaseAdmin = getSupabaseAdminClient();
           if (!supabaseAdmin?.auth?.admin) {
-            throw new Error('Supabase admin client is not properly initialized');
+            throw new Error(
+              'Supabase admin client is not properly initialized',
+            );
           }
           const { error: deleteError } =
             await supabaseAdmin.auth.admin.deleteUser(supabaseUserId);
