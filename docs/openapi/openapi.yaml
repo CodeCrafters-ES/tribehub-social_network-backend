@@ -235,6 +235,12 @@ paths:
                     example: 900
         '401':
           description: Unauthorized (Invalid or missing token).
+        '429':
+          description: Too many requests (rate limit exceeded).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /account/delete/confirm:
     post:
@@ -260,6 +266,7 @@ paths:
                   format: uuid
                 password:
                   type: string
+                  minLength: 8
       responses:
         '200':
           description: Deletion confirmed successfully.
@@ -275,6 +282,18 @@ paths:
           description: Invalid, expired, or already processed request.
         '401':
           description: Incorrect password or unauthorized user.
+        '404':
+          description: Delete request not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many requests (rate limit exceeded).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 components:
   securitySchemes:
