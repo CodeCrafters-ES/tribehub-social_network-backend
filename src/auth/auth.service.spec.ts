@@ -44,11 +44,19 @@ const mockSecurityMonitor = {
   recordInvalidToken: vi.fn(),
 };
 
+const mockConfigService = {
+  get: vi.fn().mockImplementation((key: string) => {
+    if (key === 'REFRESH_TOKEN_TTL_DAYS') return '7';
+    return undefined;
+  }),
+};
+
 function buildService(): AuthService {
   return new AuthService(
     mockUsersRepository as never,
     mockAuthRepository as never,
     mockSecurityMonitor as never,
+    mockConfigService as never,
   );
 }
 
@@ -545,5 +553,6 @@ describe('AuthService.refreshSession', () => {
     ).rejects.toThrow('Unauthorized');
 
     expect(mockAuthRepository.rotateRefreshToken).not.toHaveBeenCalled();
+    expect(mockAuthRepository.revokeAllActiveUserTokens).not.toHaveBeenCalled();
   });
 });
