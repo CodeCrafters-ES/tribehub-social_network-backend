@@ -1,4 +1,24 @@
 // src/auth/guards/supabase-auth.guard.ts
+//
+// DECISIÓN DE DISEÑO — Acceso a recursos protegidos (issue #91)
+// -------------------------------------------------------------
+// El issue #91 proponía crear un archivo `src/common/guards/access-token.guard.ts`
+// como guard genérico para validar access tokens. Se tomó la decisión de NO
+// crear ese archivo y usar directamente `SupabaseAuthGuard` en todos los
+// controladores protegidos por las siguientes razones:
+//
+//   1. SupabaseAuthGuard ya cumple el rol de "access-token guard": valida el
+//      Bearer token emitido por Supabase (ES256, JWKS), extrae el payload y lo
+//      adjunta a `request.supabaseUser`. No tiene responsabilidades adicionales
+//      que justifiquen una abstracción separada.
+//
+//   2. Introducir un guard intermedio vacío añadiría indirección sin valor, lo
+//      que dificultaría la trazabilidad cuando se depuren errores de auth.
+//
+//   3. Si en el futuro se adopta un proveedor de identidad distinto, el punto de
+//      cambio será este guard — no un alias en common/guards/.
+//
+// Referencia: PR #159, issue #91.
 
 import {
   CanActivate,

@@ -1,28 +1,19 @@
 import { vi } from 'vitest';
-import { Test, TestingModule } from '@nestjs/testing';
+import { TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/prisma/prisma.service';
+import { createTestAppBuilder } from './test-app.factory';
 
-// Set required env vars before any module is imported/initialized.
-// getRedisConnection() throws at module load time when REDIS_URL is absent.
-// Pointing to localhost is sufficient for the module to boot; a live Redis
-// connection is not required for the health/root endpoint test.
-// SupabaseAuthGuard throws at guard instantiation when SUPABASE_URL is absent.
-process.env.REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
-process.env.SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://localhost:54321';
-process.env.SUPABASE_ANON_KEY =
-  process.env.SUPABASE_ANON_KEY ?? 'test-anon-key';
+// Environment stubs (REDIS_URL, SUPABASE_*) are set by test/setup-integration.ts
+// which vitest.integration.config.ts lists in setupFiles. No env setup needed here.
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
 
   beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    })
+    const moduleFixture: TestingModule = await createTestAppBuilder()
       .overrideProvider(PrismaService)
       .useValue({
         $connect: vi.fn(),
@@ -35,13 +26,7 @@ describe('AppController (e2e)', () => {
   });
 
   afterEach(async () => {
-    // Gracefully close the app, ignoring errors from already-closed Redis connections.
-    // This prevents "Connection is closed" errors during teardown from failing tests.
-    try {
-      await app.close();
-    } catch {
-      // App already closed or connection errors - safe to ignore
-    }
+    await app.close();
   });
 
   it('/ (GET)', () => {

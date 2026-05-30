@@ -1,5 +1,5 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -18,9 +18,12 @@ import { SearchModule } from './modules/search/search.module';
 import { QueuesModule } from './queues/queues.module';
 import { BullboardModule } from './admin/queues/bullboard.module';
 import { ProfileModule } from './modules/profile/profile.module';
+import { AccountModule } from './modules/account/account.module';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 20 }]),
     ConfigModule.forRoot({
       isGlobal: true,
       // Load the env file that matches the current NODE_ENV.
@@ -42,6 +45,7 @@ import { ProfileModule } from './modules/profile/profile.module';
     QueuesModule,
     BullboardModule,
     ProfileModule,
+    AccountModule,
   ],
   controllers: [AppController],
   providers: [
@@ -57,6 +61,10 @@ import { ProfileModule } from './modules/profile/profile.module';
     {
       provide: APP_INTERCEPTOR,
       useClass: HttpMetricsInterceptor,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
   ],
 })
