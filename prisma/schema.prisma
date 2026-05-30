@@ -76,6 +76,7 @@ model RefreshToken {
 
   @@index([userId])
   @@index([replacedByTokenId])
+  @@index([expiresAt])
   @@map("refresh_tokens")
 }
 
