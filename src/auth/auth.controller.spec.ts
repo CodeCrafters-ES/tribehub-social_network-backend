@@ -22,6 +22,7 @@ describe('AuthController', () => {
             register: vi.fn(),
             login: vi.fn(),
             logout: vi.fn(),
+            refreshSession: vi.fn(),
           },
         },
       ],
@@ -57,20 +58,45 @@ describe('AuthController', () => {
     );
   });
 
-  it('should login a user', async () => {
+  it('should login a user and set three cookies (access_token, refresh_token, XSRF-TOKEN)', async () => {
     const dto: LoginDto = { email: 'test@gmail.com', password: 'password123' };
     (service.login as Mock).mockResolvedValue({
-      session: { access_token: 'access-jwt', refresh_token: 'refresh-jwt' },
-      user: { id: 'user-id', email: 'test@gmail.com' },
+      session: {
+        access_token: 'access-jwt',
+        refresh_token: 'refresh-jwt',
+        expires_in: 3600,
+      },
+      localUser: {
+        id: 'user-id',
+        username: 'testuser',
+        email: 'test@gmail.com',
+      },
+      csrfToken: 'csrf-token-abc',
     });
+    const req = {
+      ip: '127.0.0.1',
+      headers: { 'user-agent': 'vitest' },
+    } as unknown as import('express').Request;
+    const res = {
+      cookie: vi.fn(),
+      clearCookie: vi.fn(),
+    } as unknown as import('express').Response;
 
-    const result = await controller.login(dto);
+    const result = await controller.login(dto, req, res);
     expect(result.success).toBe(true);
     expect(result.data).toEqual({
-      accessToken: 'access-jwt',
-      refreshToken: 'refresh-jwt',
-      user: { id: 'user-id', email: 'test@gmail.com' },
+      id: 'user-id',
+      username: 'testuser',
+      email: 'test@gmail.com',
     });
+    // Three cookies: access_token, refresh_token, XSRF-TOKEN
+    expect((res.cookie as Mock).mock.calls.length).toBe(3);
+    const cookieNames = (res.cookie as Mock).mock.calls.map(
+      (c: unknown[]) => c[0],
+    );
+    expect(cookieNames).toContain('access_token');
+    expect(cookieNames).toContain('refresh_token');
+    expect(cookieNames).toContain('XSRF-TOKEN');
   });
 
   it('should handle login error', async () => {
@@ -80,7 +106,60 @@ describe('AuthController', () => {
     };
     (service.login as Mock).mockRejectedValue(new Error('Login failed'));
 
-    await expect(controller.login(dto)).rejects.toThrowError('Login failed');
+    await expect(
+      controller.login(
+        { ...dto },
+        { headers: {}, ip: '127.0.0.1' } as never,
+        {} as never,
+      ),
+    ).rejects.toThrowError('Login failed');
+  });
+
+  describe('refresh', () => {
+    it('rotates cookie and returns new access token', async () => {
+      (service.refreshSession as Mock).mockResolvedValue({
+        accessToken: 'new-access',
+        refreshToken: 'new-refresh',
+        refreshExpiresAt: new Date(Date.now() + 1000),
+        csrfToken: 'new-csrf',
+      });
+
+      const req = {
+        cookies: { refresh_token: 'old-refresh' },
+        ip: '127.0.0.1',
+        headers: { 'user-agent': 'vitest' },
+      } as unknown as import('express').Request;
+      const res = {
+        cookie: vi.fn(),
+        clearCookie: vi.fn(),
+      } as unknown as import('express').Response;
+
+      const result = await controller.refresh(req, res);
+
+      expect(result).toMatchObject({
+        success: true,
+        data: { accessToken: 'new-access' },
+      });
+      expect((res.cookie as Mock).mock.calls.length).toBe(2);
+    });
+
+    it('throws UnauthorizedException (401) when refresh_token cookie is absent', async () => {
+      const req = {
+        cookies: {},
+        ip: '127.0.0.1',
+        headers: { 'user-agent': 'vitest' },
+      } as unknown as import('express').Request;
+      const res = {
+        cookie: vi.fn(),
+        clearCookie: vi.fn(),
+      } as unknown as import('express').Response;
+
+      await expect(controller.refresh(req, res)).rejects.toThrow(
+        'Unauthorized',
+      );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(service.refreshSession).not.toHaveBeenCalled();
+    });
   });
 
   describe('logout', () => {
@@ -130,13 +209,14 @@ describe('AuthController', () => {
 
       await controller.logout(req, res);
 
-      // clearCookie must be called at least once for refresh_token and XSRF-TOKEN
+      // clearCookie must be called for access_token, refresh_token, and XSRF-TOKEN
       expect(
         (res.clearCookie as Mock).mock.calls.length,
-      ).toBeGreaterThanOrEqual(2);
+      ).toBeGreaterThanOrEqual(3);
       const clearedNames = (res.clearCookie as Mock).mock.calls.map(
         (c: unknown[]) => c[0],
       );
+      expect(clearedNames).toContain('access_token');
       expect(clearedNames).toContain('refresh_token');
       expect(clearedNames).toContain('XSRF-TOKEN');
     });

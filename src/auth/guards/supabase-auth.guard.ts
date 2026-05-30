@@ -8,22 +8,15 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Request } from 'express';
 import * as jsonwebtoken from 'jsonwebtoken';
 import type { JwtPayload } from 'jsonwebtoken';
 import jwksRsa from 'jwks-rsa';
 import type { JwksClient } from 'jwks-rsa';
 import { SecurityMonitorService } from '../../observability/alerts/security-monitor.service';
 import { UsersService } from '../../modules/users/users.service';
+import { AuthenticatedRequest } from '../../common/types/authenticated-request.type';
 
 const jwt = jsonwebtoken;
-
-export type AuthenticatedRequest = Request & {
-  supabaseUser: JwtPayload;
-  supabaseToken: string;
-  /** Internal user ID from public.users table */
-  userId?: string;
-};
 
 @Injectable()
 export class SupabaseAuthGuard implements CanActivate {
