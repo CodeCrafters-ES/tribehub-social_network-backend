@@ -7,6 +7,7 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
 import { createHash, randomBytes } from 'crypto';
 
@@ -27,14 +28,21 @@ import { SecurityMonitorService } from '../observability/alerts/security-monitor
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private readonly refreshTtlMs =
-    Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? '7') * 24 * 60 * 60 * 1000;
+  private readonly refreshTtlMs: number;
 
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly authRepository: AuthRepository,
     private readonly securityMonitor: SecurityMonitorService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.refreshTtlMs =
+      Number(this.configService.get('REFRESH_TOKEN_TTL_DAYS') ?? '7') *
+      24 *
+      60 *
+      60 *
+      1000;
+  }
 
   async register(data: RegisterRequestDto) {
     const { email, password, username } = data;
@@ -206,7 +214,6 @@ export class AuthService {
       throw new UnauthorizedException('Unauthorized');
     }
 
-    // A revoked or expired token signals possible token reuse — aggressively revoke all sessions for this user.
     if (
       existingToken.revokedAt ||
       existingToken.expiresAt.getTime() <= Date.now()
