@@ -206,6 +206,7 @@ export class AuthService {
       throw new UnauthorizedException('Unauthorized');
     }
 
+    // A revoked or expired token signals possible token reuse — aggressively revoke all sessions for this user.
     if (
       existingToken.revokedAt ||
       existingToken.expiresAt.getTime() <= Date.now()
