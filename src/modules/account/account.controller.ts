@@ -29,10 +29,7 @@ export class AccountController {
   @Post('delete/request')
   @HttpCode(HttpStatus.OK)
   @ApiBody({ type: DeleteAccountRequestDto })
-  async requestDelete(
-    @Req() req: AuthenticatedRequest,
-    @Body() _body: DeleteAccountRequestDto,
-  ) {
+  async requestDelete(@Req() req: AuthenticatedRequest) {
     const userId = req.supabaseUser.sub;
 
     if (!userId || !isUUID(userId)) {
