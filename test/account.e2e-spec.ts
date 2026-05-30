@@ -5,7 +5,6 @@ import {
   ValidationPipe,
   ExecutionContext,
 } from '@nestjs/common';
-import { ThrottlerModule } from '@nestjs/throttler';
 import type { AuthenticatedRequest } from './../src/common/types/authenticated-request.type';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -27,23 +26,11 @@ function applyGlobalSetup(app: INestApplication): void {
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
 }
 
-/**
- * Crea el módulo de pruebas base con los stubs necesarios.
- * El ThrottlerModule se sobreescribe con límites bajos (limit: 3, ttl: 60000)
- * para que el test de rate limiting sea determinista e independiente de los
- * límites de producción configurados en AppModule.
- *
- * Nota: se usa limit: 3 (no 5) para que el test sea rápido y no dependa del
- * decorador @Throttle del controlador — el test envía 3 peticiones y espera
- * que la 4ª sea rechazada por el límite del módulo de test.
- */
 async function buildTestModule(mockAccountService: {
   createDeleteRequest: ReturnType<typeof vi.fn>;
   confirmDeleteRequest: ReturnType<typeof vi.fn>;
 }): Promise<TestingModule> {
   return createTestAppBuilder()
-    .overrideModule(ThrottlerModule)
-    .useModule(ThrottlerModule.forRoot([{ ttl: 60000, limit: 3 }]))
     .overrideGuard(SupabaseAuthGuard)
     .useValue({
       canActivate: (context: ExecutionContext) => {
@@ -129,11 +116,13 @@ describe('Account Deletion (e2e)', () => {
   it('should trigger rate limiting after exceeding the limit', async () => {
     mockAccountService.createDeleteRequest.mockResolvedValue({ ok: true });
 
-    // El ThrottlerModule de test tiene limit: 3, por lo que la 4ª petición
-    // debe devolver 429 de forma determinista, sin depender de los límites
-    // de producción ni del estado de otras suites.
-    for (let i = 0; i < 3; i++) {
-      await request(app.getHttpServer()).post('/api/v1/account/delete/request');
+    // The endpoint has @Throttle({ default: { limit: 5, ttl: 900000 } }) which
+    // overrides module-level defaults. Exhaust the 5-request allowance, then
+    // the 6th request must return 429.
+    for (let i = 0; i < 5; i++) {
+      await request(app.getHttpServer())
+        .post('/api/v1/account/delete/request')
+        .expect(200);
     }
 
     const response = await request(app.getHttpServer())
