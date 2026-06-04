@@ -7,11 +7,14 @@ import {
   ThrottlerModuleOptions,
   ThrottlerStorage,
   ThrottlerOptions,
+  ThrottlerRequest,
+  ThrottlerLimitDetail,
   InjectThrottlerOptions,
   InjectThrottlerStorage,
 } from '@nestjs/throttler';
 import type { ExecutionContext } from '@nestjs/common';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
+import { createHash } from 'node:crypto';
 import { SecurityMonitorService } from '../../observability/alerts/security-monitor.service';
 
 /** Login rate-limit policy: 5 attempts per 5-minute sliding window. */
@@ -32,16 +35,26 @@ function normalisedEmail(req: Record<string, unknown>): string | undefined {
   return typeof email === 'string' ? email.trim().toLowerCase() : undefined;
 }
 
+/**
+ * Hash the email before using it as part of the rate-limit key so that the
+ * Redis store never holds login identifiers in clear — anyone with read access
+ * to the store cannot enumerate which accounts are being targeted. A truncated
+ * SHA-256 keeps the key short while keeping collisions negligible for keying.
+ */
+function hashEmail(email: string): string {
+  return createHash('sha256').update(email).digest('hex').slice(0, 16);
+}
+
 /** Tracker keyed by client IP only (caps total attempts from one address). */
 export function loginIpTracker(req: Record<string, unknown>): string {
   return `login:ip:${clientIp(req)}`;
 }
 
-/** Tracker keyed by client IP + normalised email (caps attempts per account). */
+/** Tracker keyed by client IP + hashed email (caps attempts per account). */
 export function loginIpEmailTracker(req: Record<string, unknown>): string {
   const email = normalisedEmail(req);
   return email
-    ? `login:ip:${clientIp(req)}:email:${email}`
+    ? `login:ip:${clientIp(req)}:email:${hashEmail(email)}`
     : `login:ip:${clientIp(req)}`;
 }
 
@@ -56,12 +69,17 @@ export function loginIpEmailTracker(req: Record<string, unknown>): string {
  *
  * Two independent dimensions are enforced (both 5 attempts / 5 min):
  *   - `login-ip`       — caps total attempts from a single IP (brute-force).
- *   - `login-ip-email` — caps attempts against a single account, so an attacker
- *                        cannot evade by changing the targeted email.
+ *   - `login-ip-email` — caps attempts against a single account (the email is
+ *                        hashed), so an attacker cannot evade by changing the
+ *                        targeted email.
  *
  * On breach it logs a non-sensitive event (ip, endpoint, timestamp — never the
- * email in clear nor any password), feeds the existing brute-force detector and
- * returns a 429 whose body matches the API contract.
+ * email in clear nor any password), feeds the existing brute-force detector,
+ * sets a `Retry-After` header and returns a 429 matching the API contract.
+ *
+ * Rate limiting fails OPEN: if the shared store (Redis) is unreachable the
+ * request is allowed through rather than turning a storage outage into a login
+ * outage. The failure is logged for visibility.
  */
 @Injectable()
 export class LoginThrottlerGuard extends ThrottlerGuard {
@@ -99,8 +117,43 @@ export class LoginThrottlerGuard extends ThrottlerGuard {
     ] as ThrottlerOptions[];
   }
 
-  protected throwThrottlingException(context: ExecutionContext): Promise<void> {
-    const request = context.switchToHttp().getRequest<Request>();
+  /**
+   * Wrap the base flow so a storage (Redis) failure fails open: the 429 raised
+   * by throwThrottlingException is an HttpException and must propagate, but any
+   * other error (e.g. Redis unreachable) is swallowed and the request allowed.
+   */
+  protected async handleRequest(
+    requestProps: ThrottlerRequest,
+  ): Promise<boolean> {
+    try {
+      return await super.handleRequest(requestProps);
+    } catch (err) {
+      if (err instanceof HttpException) {
+        throw err;
+      }
+      this.logger.error({
+        event: 'auth.login.rate_limit_storage_error',
+        message: err instanceof Error ? err.message : 'unknown storage error',
+      });
+      return true; // fail open — never block login because the store is down
+    }
+  }
+
+  protected throwThrottlingException(
+    context: ExecutionContext,
+    throttlerLimitDetail: ThrottlerLimitDetail,
+  ): Promise<void> {
+    const http = context.switchToHttp();
+    const request = http.getRequest<Request>();
+    const response = http.getResponse<Response>();
+
+    // Emit the canonical Retry-After (seconds) in addition to the per-throttler
+    // header the base guard already set.
+    response.header(
+      'Retry-After',
+      String(throttlerLimitDetail.timeToBlockExpire),
+    );
+
     // Minimal, non-sensitive context only — no email in clear, no password.
     this.logger.warn({
       event: 'auth.login.rate_limited',
