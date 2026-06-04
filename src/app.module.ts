@@ -20,10 +20,20 @@ import { BullboardModule } from './admin/queues/bullboard.module';
 import { ProfileModule } from './modules/profile/profile.module';
 import { AccountModule } from './modules/account/account.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
+import { buildRedisClient } from './queues/redis.connection';
 
 @Module({
   imports: [
-    ThrottlerModule.forRoot([{ ttl: 60000, limit: 20 }]),
+    // Shared Redis store so rate limits stay consistent across replicas.
+    // Reuses the existing Redis connection helper (the app already requires
+    // REDIS_URL via QueuesModule, so this adds no new infrastructure need).
+    ThrottlerModule.forRootAsync({
+      useFactory: () => ({
+        throttlers: [{ ttl: 60000, limit: 20 }],
+        storage: new ThrottlerStorageRedisService(buildRedisClient()),
+      }),
+    }),
     ConfigModule.forRoot({
       isGlobal: true,
       // Load the env file that matches the current NODE_ENV.

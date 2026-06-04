@@ -7,6 +7,7 @@ import { AuthRepository } from './repositories/auth.repository';
 import { SupabaseAuthGuard } from './guards/supabase-auth.guard';
 import { PasswordHashService } from './password-hash.service';
 import { CsrfGuard } from '../common/guards/csrf.guard';
+import { LoginThrottlerGuard } from '../common/guards/login-throttler.guard';
 import { UsersModule } from '../modules/users/users.module';
 import { ObservabilityModule } from '../observability/observability.module';
 
@@ -18,6 +19,7 @@ import { ObservabilityModule } from '../observability/observability.module';
     AuthRepository,
     SupabaseAuthGuard,
     CsrfGuard,
+    LoginThrottlerGuard,
     PasswordHashService,
   ],
   exports: [SupabaseAuthGuard, PasswordHashService],
