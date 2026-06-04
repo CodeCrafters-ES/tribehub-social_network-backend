@@ -7,6 +7,7 @@ import { AuthService } from './auth.service';
 import { BadRequestException } from '@nestjs/common';
 import { RegisterRequestDto } from './dto/register.request.dto';
 import { LoginDto } from './dto/login.dto';
+import { LoginThrottlerGuard } from '../common/guards/login-throttler.guard';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -26,7 +27,12 @@ describe('AuthController', () => {
           },
         },
       ],
-    }).compile();
+    })
+      // The login route binds LoginThrottlerGuard via @UseGuards; override it
+      // so the test module doesn't need the real ThrottlerModule wiring/Redis.
+      .overrideGuard(LoginThrottlerGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<AuthController>(AuthController);
     service = module.get<AuthService>(AuthService);

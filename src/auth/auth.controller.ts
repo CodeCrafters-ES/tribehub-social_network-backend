@@ -36,6 +36,8 @@ import {
   buildCsrfCookieOptions,
 } from '../common/utils/cookies';
 import { CsrfGuard } from '../common/guards/csrf.guard';
+import { LoginThrottlerGuard } from '../common/guards/login-throttler.guard';
+import { SkipThrottle } from '@nestjs/throttler';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -79,6 +81,12 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  // Brute-force protection: 5 attempts / 5 min, bucketed by IP and by IP+email.
+  // @SkipThrottle() disables the global IP-based ThrottlerGuard for this route
+  // so LoginThrottlerGuard governs it alone — otherwise the global guard would
+  // run first and return the default 429 body instead of the API contract one.
+  @UseGuards(LoginThrottlerGuard)
+  @SkipThrottle()
   @ApiOperation({ summary: 'Authenticate with email and password' })
   @ApiResponse({
     status: 200,
@@ -92,6 +100,10 @@ export class AuthController {
   @ApiResponse({
     status: 401,
     description: 'Unauthorized — invalid credentials',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests — login rate limit exceeded',
   })
   async login(
     @Body() dto: LoginDto,

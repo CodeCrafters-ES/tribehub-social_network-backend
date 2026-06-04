@@ -13,6 +13,15 @@
  * connection to localhost:6379, fails with ECONNREFUSED, and emits an
  * unhandled rejection — even though the actual test assertions pass.
  *
+ * Additionally, ThrottlerModule.forRootAsync in AppModule creates a
+ * ThrottlerStorageRedisService (and therefore an ioredis client) inside its
+ * useFactory. We override the THROTTLER_OPTIONS token with an in-memory
+ * configuration so that ThrottlerStorageProvider falls back to the built-in
+ * ThrottlerStorageService — no Redis connection is opened. Rate-limit
+ * behaviour is still enforced in integration tests (the memory store respects
+ * the configured limits), so the account-deletion rate-limit test continues
+ * to work correctly.
+ *
  * APPROACH
  * --------
  * We stub QueueService, DefaultWorker, and QueueMonitorService with no-op
@@ -30,6 +39,7 @@
 
 import { vi } from 'vitest';
 import { Test, TestingModuleBuilder } from '@nestjs/testing';
+import { getOptionsToken } from '@nestjs/throttler';
 import { AppModule } from './../src/app.module';
 import { QueueService } from './../src/queues/queue.service';
 import { DefaultWorker } from './../src/queues/workers/default.worker';
@@ -92,13 +102,23 @@ export function createTestAppBuilder(): TestingModuleBuilder {
       ),
   };
 
-  return Test.createTestingModule({ imports: [AppModule] })
-    .overrideProvider(QueueService)
-    .useValue(queueServiceStub)
-    .overrideProvider(DefaultWorker)
-    .useValue(defaultWorkerStub)
-    .overrideProvider(QueueMonitorService)
-    .useValue(queueMonitorStub)
-    .overrideProvider(BULLBOARD_ADAPTER)
-    .useValue(bullboardAdapterStub);
+  return (
+    Test.createTestingModule({ imports: [AppModule] })
+      // Replace ThrottlerModule's Redis-backed options with a plain in-memory
+      // configuration. ThrottlerStorageProvider reads THROTTLER_OPTIONS and,
+      // when no `storage` key is present, falls back to ThrottlerStorageService
+      // (in-memory). This prevents the ioredis client created inside
+      // AppModule's ThrottlerModule.forRootAsync useFactory from ever being
+      // instantiated during test bootstrap.
+      .overrideProvider(getOptionsToken())
+      .useValue({ throttlers: [{ ttl: 60000, limit: 20 }] })
+      .overrideProvider(QueueService)
+      .useValue(queueServiceStub)
+      .overrideProvider(DefaultWorker)
+      .useValue(defaultWorkerStub)
+      .overrideProvider(QueueMonitorService)
+      .useValue(queueMonitorStub)
+      .overrideProvider(BULLBOARD_ADAPTER)
+      .useValue(bullboardAdapterStub)
+  );
 }

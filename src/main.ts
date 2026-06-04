@@ -1,5 +1,6 @@
 import './instrument';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
 import cookieParser from 'cookie-parser';
@@ -14,7 +15,21 @@ import {
 import type { ExpressAdapter } from '@bull-board/express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  const nodeEnv = process.env.NODE_ENV || 'development';
+
+  // Trust the reverse proxy (Railway/Netlify) so that `req.ip` reflects the
+  // real client IP taken from X-Forwarded-For — essential for correct per-IP
+  // rate limiting. We trust a FIXED number of proxy hops (not `true`): trusting
+  // every X-Forwarded-For entry would let a client spoof its IP and evade the
+  // limits. Defaults to 0 in development (no proxy) and 1 in staging/production
+  // (single Railway edge proxy); override with TRUST_PROXY_HOPS if the infra
+  // adds more hops.
+  const trustProxyHops = Number(
+    process.env.TRUST_PROXY_HOPS ?? (nodeEnv === 'development' ? 0 : 1),
+  );
+  app.set('trust proxy', Number.isNaN(trustProxyHops) ? 1 : trustProxyHops);
 
   app.use(cookieParser());
 
@@ -43,8 +58,6 @@ async function bootstrap() {
       },
     }),
   );
-
-  const nodeEnv = process.env.NODE_ENV || 'development';
 
   const corsOriginsByEnv: Record<string, string[]> = {
     development: [
