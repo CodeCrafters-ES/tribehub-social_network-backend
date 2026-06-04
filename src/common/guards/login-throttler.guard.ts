@@ -6,6 +6,7 @@ import {
   ThrottlerGuard,
   ThrottlerModuleOptions,
   ThrottlerStorage,
+  ThrottlerOptions,
   InjectThrottlerOptions,
   InjectThrottlerStorage,
 } from '@nestjs/throttler';
@@ -13,23 +14,54 @@ import type { ExecutionContext } from '@nestjs/common';
 import type { Request } from 'express';
 import { SecurityMonitorService } from '../../observability/alerts/security-monitor.service';
 
+/** Login rate-limit policy: 5 attempts per 5-minute sliding window. */
+export const LOGIN_RATE_LIMIT = 5;
+export const LOGIN_RATE_TTL_MS = 5 * 60 * 1000;
+
+function clientIp(req: Record<string, unknown>): string {
+  const ip = (req as { ip?: unknown }).ip;
+  return typeof ip === 'string' && ip.length > 0 ? ip : 'unknown';
+}
+
+function normalisedEmail(req: Record<string, unknown>): string | undefined {
+  const body = (req as { body?: unknown }).body;
+  const email =
+    body && typeof body === 'object'
+      ? (body as { email?: unknown }).email
+      : undefined;
+  return typeof email === 'string' ? email.trim().toLowerCase() : undefined;
+}
+
+/** Tracker keyed by client IP only (caps total attempts from one address). */
+export function loginIpTracker(req: Record<string, unknown>): string {
+  return `login:ip:${clientIp(req)}`;
+}
+
+/** Tracker keyed by client IP + normalised email (caps attempts per account). */
+export function loginIpEmailTracker(req: Record<string, unknown>): string {
+  const email = normalisedEmail(req);
+  return email
+    ? `login:ip:${clientIp(req)}:email:${email}`
+    : `login:ip:${clientIp(req)}`;
+}
+
 /**
  * Rate-limit guard for the unauthenticated login endpoint.
  *
- * The default ThrottlerGuard buckets by IP only, which an attacker can evade by
- * rotating IPs (to brute-force a single account) and which can also lock out a
- * whole shared NAT. This guard buckets by IP **and** the normalised email from
- * the request body, so the limit follows both dimensions. Combined with the
- * global IP-based ThrottlerGuard, this enforces "per IP AND per (IP+email)" —
- * an attacker cannot evade one dimension by rotating the other.
+ * The login route is governed SOLELY by this guard: it carries `@SkipThrottle()`
+ * so the global IP-based ThrottlerGuard (APP_GUARD) does not also police it.
+ * Were the global guard left active it would run first and answer with the
+ * default ThrottlerException body, never reaching this guard's contract-shaped
+ * 429 nor its security logging.
  *
- * Apply together with the per-route limit:
- *   @UseGuards(LoginThrottlerGuard)
- *   @Throttle({ default: { limit: 5, ttl: 300000 } })
+ * Two independent dimensions are enforced (both 5 attempts / 5 min):
+ *   - `login-ip`       — caps total attempts from a single IP (brute-force).
+ *   - `login-ip-email` — caps attempts against a single account, so an attacker
+ *                        cannot evade by changing the targeted email.
  *
- * On limit breach it logs the event with minimal context (ip, endpoint,
- * timestamp) — never the email in clear nor any password — feeds the existing
- * brute-force detector and returns a 429 whose body matches the API contract.
+ * On breach it logs a non-sensitive event (ip, endpoint, timestamp — never the
+ * email in clear nor any password), feeds the existing brute-force detector and
+ * returns a 429 whose body matches the API contract.
  */
 @Injectable()
 export class LoginThrottlerGuard extends ThrottlerGuard {
@@ -44,17 +76,27 @@ export class LoginThrottlerGuard extends ThrottlerGuard {
     super(options, storageService, reflector);
   }
 
-  protected getTracker(req: Record<string, unknown>): Promise<string> {
-    const request = req as unknown as Request;
-    const ip = request.ip ?? 'unknown';
-    const body = (request.body ?? {}) as { email?: unknown };
-    const email =
-      typeof body.email === 'string'
-        ? body.email.trim().toLowerCase()
-        : undefined;
-    return Promise.resolve(
-      email ? `login:ip:${ip}:email:${email}` : `login:ip:${ip}`,
-    );
+  async onModuleInit(): Promise<void> {
+    await super.onModuleInit();
+    // Replace the inherited module throttler with login-specific ones, so this
+    // guard enforces its own limits independently of the global 'default'
+    // throttler (which the route disables via @SkipThrottle()). Each throttler
+    // carries its own tracker, sharing the same Redis storage as the rest of
+    // the app for multi-instance consistency.
+    this.throttlers = [
+      {
+        name: 'login-ip',
+        ttl: LOGIN_RATE_TTL_MS,
+        limit: LOGIN_RATE_LIMIT,
+        getTracker: (req: Record<string, unknown>) => loginIpTracker(req),
+      },
+      {
+        name: 'login-ip-email',
+        ttl: LOGIN_RATE_TTL_MS,
+        limit: LOGIN_RATE_LIMIT,
+        getTracker: (req: Record<string, unknown>) => loginIpEmailTracker(req),
+      },
+    ] as ThrottlerOptions[];
   }
 
   protected throwThrottlingException(context: ExecutionContext): Promise<void> {
@@ -68,8 +110,14 @@ export class LoginThrottlerGuard extends ThrottlerGuard {
     });
     this.securityMonitor.recordFailedLogin();
 
+    // Include statusCode in the body so the 429 contract is self-contained and
+    // does not rely on a downstream exception filter to inject it.
     throw new HttpException(
-      { message: 'Too many requests', error: 'Too Many Requests' },
+      {
+        statusCode: HttpStatus.TOO_MANY_REQUESTS,
+        message: 'Too many requests',
+        error: 'Too Many Requests',
+      },
       HttpStatus.TOO_MANY_REQUESTS,
     );
   }

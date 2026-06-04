@@ -327,3 +327,78 @@ describe('POST /api/v1/auth/register (e2e)', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Login rate limiting (I-F-P01-02-03)
+// ---------------------------------------------------------------------------
+
+describe('POST /api/v1/auth/login — rate limiting (e2e)', () => {
+  let app: INestApplication<App>;
+
+  const LOGIN_PAYLOAD = {
+    email: 'attacker@example.com',
+    password: 'WhateverPass1',
+  };
+
+  function buildLoginSession() {
+    return {
+      session: {
+        access_token: 'access-jwt',
+        refresh_token: 'refresh-jwt',
+        expires_in: 3600,
+      },
+      refreshExpiresAt: new Date(Date.now() + 60_000),
+      csrfToken: 'csrf-token',
+      localUser: {
+        id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        username: 'attacker',
+        email: LOGIN_PAYLOAD.email,
+      },
+    };
+  }
+
+  beforeEach(async () => {
+    const moduleFixture: TestingModule = await createTestAppBuilder()
+      .overrideProvider(PrismaService)
+      .useValue({ $connect: vi.fn(), $disconnect: vi.fn() })
+      .overrideProvider(AuthService)
+      .useValue({
+        register: vi.fn(),
+        login: vi.fn().mockResolvedValue(buildLoginSession()),
+        logout: vi.fn(),
+        refreshSession: vi.fn(),
+      })
+      .compile();
+
+    app = moduleFixture.createNestApplication();
+    applyGlobalSetup(app);
+    await app.init();
+  });
+
+  afterEach(async () => {
+    if (app) await app.close();
+  });
+
+  it('returns 429 with the contract body after exceeding 5 attempts / 5 min', async () => {
+    // The login route is limited to 5 attempts / 5 min via
+    // @Throttle({ default: { limit: 5, ttl: 300000 } }). Exhaust the allowance
+    // with 5 successful logins, then the 6th request must be rate limited.
+    for (let i = 0; i < 5; i++) {
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send(LOGIN_PAYLOAD)
+        .expect(200);
+    }
+
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send(LOGIN_PAYLOAD)
+      .expect(429);
+
+    expect(response.body).toEqual({
+      statusCode: 429,
+      message: 'Too many requests',
+      error: 'Too Many Requests',
+    });
+  });
+});

@@ -3,18 +3,20 @@
 // Unit tests for LoginThrottlerGuard.
 //
 // Strategy:
+//   - Test the exported tracker helpers directly (pure functions).
 //   - Construct the guard with mocked ThrottlerModuleOptions, storage,
-//     Reflector and SecurityMonitorService (no real Redis).
-//   - Exercise the protected getTracker / throwThrottlingException directly via
-//     a typed cast, building minimal request / ExecutionContext stubs.
+//     Reflector and SecurityMonitorService to exercise throwThrottlingException.
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import type { ExecutionContext } from '@nestjs/common';
-import { LoginThrottlerGuard } from './login-throttler.guard';
+import {
+  LoginThrottlerGuard,
+  loginIpTracker,
+  loginIpEmailTracker,
+} from './login-throttler.guard';
 
 type GuardInternals = {
-  getTracker(req: Record<string, unknown>): Promise<string>;
   throwThrottlingException(context: ExecutionContext): Promise<void>;
 };
 
@@ -44,40 +46,38 @@ describe('LoginThrottlerGuard', () => {
     vi.clearAllMocks();
   });
 
-  describe('getTracker', () => {
-    it('keys by IP + normalised email when an email is present', async () => {
-      const { guard } = buildGuard();
-      const tracker = await (guard as unknown as GuardInternals).getTracker({
-        ip: '203.0.113.7',
-        body: { email: '  User@Example.COM ' },
-      });
-      expect(tracker).toBe('login:ip:203.0.113.7:email:user@example.com');
+  describe('loginIpTracker', () => {
+    it('keys by IP only', () => {
+      expect(loginIpTracker({ ip: '203.0.113.7' })).toBe(
+        'login:ip:203.0.113.7',
+      );
     });
 
-    it('falls back to IP only when no email is provided', async () => {
-      const { guard } = buildGuard();
-      const tracker = await (guard as unknown as GuardInternals).getTracker({
-        ip: '203.0.113.7',
-        body: {},
-      });
-      expect(tracker).toBe('login:ip:203.0.113.7');
+    it('uses "unknown" when the IP is missing', () => {
+      expect(loginIpTracker({})).toBe('login:ip:unknown');
+    });
+  });
+
+  describe('loginIpEmailTracker', () => {
+    it('keys by IP + normalised email when an email is present', () => {
+      expect(
+        loginIpEmailTracker({
+          ip: '203.0.113.7',
+          body: { email: '  User@Example.COM ' },
+        }),
+      ).toBe('login:ip:203.0.113.7:email:user@example.com');
     });
 
-    it('falls back to IP only when email is not a string', async () => {
-      const { guard } = buildGuard();
-      const tracker = await (guard as unknown as GuardInternals).getTracker({
-        ip: '203.0.113.7',
-        body: { email: 12345 },
-      });
-      expect(tracker).toBe('login:ip:203.0.113.7');
+    it('falls back to IP only when no email is provided', () => {
+      expect(loginIpEmailTracker({ ip: '203.0.113.7', body: {} })).toBe(
+        'login:ip:203.0.113.7',
+      );
     });
 
-    it('uses "unknown" when the IP is missing', async () => {
-      const { guard } = buildGuard();
-      const tracker = await (guard as unknown as GuardInternals).getTracker({
-        body: { email: 'a@b.com' },
-      });
-      expect(tracker).toBe('login:ip:unknown:email:a@b.com');
+    it('falls back to IP only when email is not a string', () => {
+      expect(
+        loginIpEmailTracker({ ip: '203.0.113.7', body: { email: 12345 } }),
+      ).toBe('login:ip:203.0.113.7');
     });
   });
 
@@ -104,6 +104,7 @@ describe('LoginThrottlerGuard', () => {
       const exception = thrown as HttpException;
       expect(exception.getStatus()).toBe(HttpStatus.TOO_MANY_REQUESTS);
       expect(exception.getResponse()).toEqual({
+        statusCode: HttpStatus.TOO_MANY_REQUESTS,
         message: 'Too many requests',
         error: 'Too Many Requests',
       });

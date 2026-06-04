@@ -37,7 +37,7 @@ import {
 } from '../common/utils/cookies';
 import { CsrfGuard } from '../common/guards/csrf.guard';
 import { LoginThrottlerGuard } from '../common/guards/login-throttler.guard';
-import { Throttle } from '@nestjs/throttler';
+import { SkipThrottle } from '@nestjs/throttler';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -81,11 +81,12 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  // Brute-force protection: 5 attempts / 5 min, bucketed by IP + email.
-  // LoginThrottlerGuard adds the per-email dimension on top of the global
-  // IP-based ThrottlerGuard, both reading this @Throttle override.
+  // Brute-force protection: 5 attempts / 5 min, bucketed by IP and by IP+email.
+  // @SkipThrottle() disables the global IP-based ThrottlerGuard for this route
+  // so LoginThrottlerGuard governs it alone — otherwise the global guard would
+  // run first and return the default 429 body instead of the API contract one.
   @UseGuards(LoginThrottlerGuard)
-  @Throttle({ default: { limit: 5, ttl: 300000 } })
+  @SkipThrottle()
   @ApiOperation({ summary: 'Authenticate with email and password' })
   @ApiResponse({
     status: 200,
