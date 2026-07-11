@@ -15,7 +15,7 @@ services:
       POSTGRES_PASSWORD: tribehub
       POSTGRES_DB: tribehub_dev
     ports:
-      - "5432:5432"
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - tribehub_db_data:/var/lib/postgresql/data
     restart: unless-stopped
